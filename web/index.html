@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SurveyPulse | Dual-Store Data Engineering Lakehouse & Analytics</title>
+  <meta name="description" content="Production-grade ELT Survey Data Pipeline: MongoDB Data Lake -> Pandas Cleaning & RapidFuzz Standardization -> PostgreSQL Dimensional Star Schema Warehouse.">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Chart.js and AlaSQL CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/alasql@4"></script>
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <div class="container nav-content">
+      <a href="#" class="brand">
+        <div class="brand-logo">⚡</div>
+        <div>
+          <div class="brand-title">SurveyPulse</div>
+        </div>
+        <span class="brand-badge">Production Live</span>
+      </a>
+
+      <ul class="nav-links">
+        <li><button class="nav-btn active" data-tab="analytics">📊 Analytics Views</button></li>
+        <li><button class="nav-btn" data-tab="optimization">⚡ SQL Benchmarks</button></li>
+        <li><button class="nav-btn" data-tab="dq">🛡️ Data Quality & Audit</button></li>
+        <li><button class="nav-btn" data-tab="sql">💻 Interactive SQL</button></li>
+        <li><button class="nav-btn" data-tab="architecture">🏗️ Architecture</button></li>
+      </ul>
+
+      <div>
+        <a href="https://github.com/NishchayVashishtha/survey-data-pipeline" target="_blank" rel="noopener noreferrer" class="btn-primary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          GitHub Repository
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container">
+    <!-- Hero / Headline -->
+    <header class="hero">
+      <div class="hero-tag">
+        <span>Dual-Store Hybrid Lakehouse</span>
+        <span>•</span>
+        <span>MongoDB 7.0 + PostgreSQL 16</span>
+      </div>
+      <h1 class="hero-title">Survey Data Engineering Lakehouse & Analytics</h1>
+      <p class="hero-subtitle">
+        An end-to-end, production-grade ELT pipeline that ingests raw survey data into a schema-flexible MongoDB lake, executes Pandas/RapidFuzz cleaning and rule-based validation, and idempotently upserts a dimensional Star Schema into PostgreSQL.
+      </p>
+    </header>
+
+    <!-- KPI Metric Cards Grid -->
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">PostgreSQL Warehouse Facts <span>🏛️</span></div>
+        <div class="kpi-value" id="kpi-facts">80,591</div>
+        <div class="kpi-sub" id="kpi-respondents">71,392 unique respondents</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">MongoDB Raw Lake <span>🍃</span></div>
+        <div class="kpi-value" id="kpi-mongo">76,932</div>
+        <div class="kpi-sub">100% SHA-256 fingerprinted</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">Multi-Select Choices <span>🧩</span></div>
+        <div class="kpi-value" id="kpi-choices">136,062</div>
+        <div class="kpi-sub">Exploded relational bridge</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">Data Quality SLA <span>🛡️</span></div>
+        <div class="kpi-value" id="kpi-dq">100.0%</div>
+        <div class="kpi-sub" id="kpi-dq-sub">28 / 28 checks passed</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">Audit Rejections <span>⚠️</span></div>
+        <div class="kpi-value" id="kpi-rejects">3,349</div>
+        <div class="kpi-sub warn">Dead-letter lake routed</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">Max Query Speedup <span>⚡</span></div>
+        <div class="kpi-value" style="color: var(--accent-cyan);">254.4x</div>
+        <div class="kpi-sub">99.8% buffer I/O reduction</div>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         TAB 1: Analytics Views
+         ========================================================================= -->
+    <section id="tab-analytics" class="tab-content active">
+      <div class="section-header">
+        <h2 class="section-title">📊 Curated Public Opinion & Demographic Analytics</h2>
+        <p class="section-desc">Interactive visualizations queried directly from curated PostgreSQL views (<code>analytics.v_*</code>).</p>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Average Sentiment Rating by State (Top 15) <span>🇮🇳</span></div>
+          <div style="height: 320px;">
+            <canvas id="chart-state-sentiment"></canvas>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Income Distribution Spread by Education Tier <span>🎓</span></div>
+          <div style="height: 320px;">
+            <canvas id="chart-income-education"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Top Multi-Select Survey Answers Across Polling Waves <span>🗳️</span></div>
+        <div style="height: 280px;">
+          <canvas id="chart-choices-popularity"></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">State-Wise Public Sentiment Ranking View (<code>analytics.v_state_ranking_window</code>)</div>
+        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>National Rank</th>
+                <th>State / Region</th>
+                <th>Zone</th>
+                <th>Respondents</th>
+                <th>Avg Rating</th>
+                <th>Data Quality Score</th>
+                <th>Quartile</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-state-ranking"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         TAB 2: SQL Optimization Benchmarks
+         ========================================================================= -->
+    <section id="tab-optimization" class="tab-content">
+      <div class="section-header">
+        <h2 class="section-title">⚡ Measured SQL Optimization & Execution Plans</h2>
+        <p class="section-desc">PostgreSQL <code>EXPLAIN (ANALYZE, BUFFERS)</code> audits across 80,591 facts and 136,062 choice bridges.</p>
+      </div>
+
+      <div id="benchmark-container"></div>
+    </section>
+
+    <!-- =========================================================================
+         TAB 3: Data Quality & Audit Center
+         ========================================================================= -->
+    <section id="tab-dq" class="tab-content">
+      <div class="section-header">
+        <h2 class="section-title">🛡️ Data Quality Gate & Dead-Letter Audit Logs</h2>
+        <p class="section-desc">Mathematical assertions and reconciliation enforcement: Raw = Clean + Rejected + Duplicates.</p>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Dead-Letter Rejection Reasons <span>🚫</span></div>
+          <div style="height: 280px;">
+            <canvas id="chart-rejections"></canvas>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Pipeline Execution Runs Metastore (<code>audit.pipeline_runs</code>)</div>
+          <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Batch ID</th>
+                  <th>Status</th>
+                  <th>Source</th>
+                  <th>Extracted</th>
+                  <th>Loaded (PG)</th>
+                  <th>Rejected</th>
+                  <th>Dups</th>
+                  <th>Duration</th>
+                  <th>Started At</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-pipeline-runs"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Evaluated Data Quality Assertions (<code>audit.data_quality_results</code>)</div>
+        <div class="table-responsive" style="max-height: 380px; overflow-y: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Batch ID</th>
+                <th>Rule Name</th>
+                <th>Target Object</th>
+                <th>Status</th>
+                <th>Severity</th>
+                <th>Failed Records</th>
+                <th>Expected Condition</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-dq-assertions"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         TAB 4: Interactive In-Browser SQL Runner
+         ========================================================================= -->
+    <section id="tab-sql" class="tab-content">
+      <div class="section-header">
+        <h2 class="section-title">💻 Live In-Browser SQL Query Console</h2>
+        <p class="section-desc">Write and execute arbitrary real SQL queries against the warehouse fact sample directly in your browser.</p>
+      </div>
+
+      <div class="card">
+        <div class="sql-console">
+          <label style="font-size: 0.82rem; color: var(--text-secondary); font-weight: 600;">SQL Query Editor (Target Table: <code>facts</code>):</label>
+          <textarea id="sql-query-input" class="sql-input">SELECT state, COUNT(*) as respondents, ROUND(AVG(rating), 2) as avg_rating, ROUND(AVG(monthly_income), 0) as avg_income
+FROM ?
+GROUP BY state
+ORDER BY avg_rating DESC;</textarea>
+
+          <div class="sql-actions">
+            <div class="preset-queries">
+              <span style="font-size: 0.78rem; color: var(--text-muted); align-self: center;">Quick Queries:</span>
+              <button class="btn-preset" data-sql="SELECT state, COUNT(*) as respondents, ROUND(AVG(rating), 2) as avg_rating FROM ? GROUP BY state ORDER BY avg_rating DESC;">State Avg Rating</button>
+              <button class="btn-preset" data-sql="SELECT party_preference, COUNT(*) as vote_count, ROUND(AVG(rating), 2) as avg_rating FROM ? GROUP BY party_preference ORDER BY vote_count DESC;">Party Breakdown</button>
+              <button class="btn-preset" data-sql="SELECT occupation, COUNT(*) as count, ROUND(AVG(monthly_income), 0) as avg_salary FROM ? GROUP BY occupation ORDER BY avg_salary DESC;">Salary by Industry</button>
+              <button class="btn-preset" data-sql="SELECT respondent_id, state, occupation, education, monthly_income, rating, party_preference FROM ? WHERE rating >= 4 LIMIT 15;">Top Satisfied Respondents</button>
+            </div>
+
+            <div>
+              <button id="btn-run-sql" class="btn-primary">▶ Execute SQL</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <strong style="font-size: 0.95rem;">Query Results:</strong>
+            <span id="sql-exec-time" style="font-size: 0.8rem; font-family: var(--font-mono); color: var(--accent-cyan);">Ready to execute</span>
+          </div>
+          <div id="sql-result-container">
+            <div style="padding: 24px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border-subtle); border-radius: 8px;">
+              Click "Execute SQL" or select a preset above to run in-memory queries against the survey warehouse.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         TAB 5: Architecture & Schemas
+         ========================================================================= -->
+    <section id="tab-architecture" class="tab-content">
+      <div class="section-header">
+        <h2 class="section-title">🏗️ Dual-Store Architecture & Dimensional Model</h2>
+        <p class="section-desc">Design rationale and entity relationships connecting the MongoDB Landing Zone to the PostgreSQL Star Schema.</p>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Dual-Store Hybrid Lakehouse Rationale</div>
+          <div style="color: var(--text-secondary); font-size: 0.92rem; line-height: 1.7;">
+            <p style="margin-bottom: 12px;">
+              <strong style="color: var(--accent-cyan);">1. MongoDB 7.0 (Landing Lake):</strong> Preserves 100% of untampered raw survey submissions with cryptographic SHA-256 hashes, batch identifiers, and payload metadata. Schema-flexible JSON handles unexpected column variations between election cycles without silent rejection.
+            </p>
+            <p style="margin-bottom: 12px;">
+              <strong style="color: var(--accent-emerald);">2. Transform & Clean Engine:</strong> Resolves Unicode mojibake, unifies ambiguous null tokens, executes RapidFuzz token sort matching for states and parties, and calculates IQR outlier boundaries.
+            </p>
+            <p>
+              <strong style="color: var(--accent-indigo);">3. PostgreSQL 16 (Star Schema DW):</strong> Idempotent upserts (<code>INSERT ... ON CONFLICT DO UPDATE</code>) load normalized dimensions and facts. Indexed with B-Tree, partial, and GIN structures for high-concurrency window function analytics.
+            </p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Dimensional Star Schema Entities</div>
+          <div style="font-size: 0.88rem;">
+            <ul style="list-style: none; display: flex; flex-direction: column; gap: 10px;">
+              <li style="padding: 10px; background: rgba(15, 23, 42, 0.6); border-radius: 6px; border: 1px solid var(--border-subtle);">
+                <strong style="color: var(--accent-cyan);">warehouse.fact_responses (80,591 rows):</strong> Central fact table with surrogate keys, monthly incomes, survey ratings (1-5), and quality scores.
+              </li>
+              <li style="padding: 10px; background: rgba(15, 23, 42, 0.6); border-radius: 6px; border: 1px solid var(--border-subtle);">
+                <strong style="color: #818cf8;">warehouse.fact_response_choices (136,062 rows):</strong> Normalized bridge table exploding multi-select choices without string splitting.
+              </li>
+              <li style="padding: 10px; background: rgba(15, 23, 42, 0.6); border-radius: 6px; border: 1px solid var(--border-subtle);">
+                <strong style="color: #34d399;">warehouse.dim_respondent (71,392 rows):</strong> Deduplicated respondent natural keys, gender, and age brackets.
+              </li>
+              <li style="padding: 10px; background: rgba(15, 23, 42, 0.6); border-radius: 6px; border: 1px solid var(--border-subtle);">
+                <strong style="color: #f59e0b;">warehouse.dim_geography (66 rows):</strong> Canonical states, macro-regions (North, South, East, West), and zones.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <p>SurveyPulse: Production-Grade Dual-Store Data Engineering Pipeline</p>
+      <p style="margin-top: 6px; color: var(--text-muted);">
+        Built with Python, Pandas, RapidFuzz, MongoDB 7.0, PostgreSQL 16, and Docker Compose • Fully Idempotent & Tested
+      </p>
+    </div>
+  </footer>
+
+  <!-- Authentic Data Payload and Application Script -->
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

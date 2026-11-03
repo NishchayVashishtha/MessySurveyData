@@ -1,6 +1,9 @@
 # Survey Data Pipeline (ELT)
 ### End-to-End Survey Data Engineering Pipeline: MongoDB Data Lake to PostgreSQL Star Schema
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Cloudflare%20Public%20Tunnel-blueviolet?style=for-the-badge&logo=cloudflare)](https://gets-defense-abu-jokes.trycloudflare.com)
+[![GitHub Pages](https://img.shields.io/badge/Web%20App-GitHub%20Pages%20Live-success?style=for-the-badge&logo=github)](https://nishchayvashishtha.github.io/survey-data-pipeline/)
+
 [![CI Pipeline](https://github.com/nishchay-v/survey-data-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/nishchay-v/survey-data-pipeline/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
 [![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16-336791.svg)](https://www.postgresql.org/)
@@ -411,12 +414,14 @@ survey-data-pipeline/
 > **Project Description (1 Line):**  
 > *Production-grade ELT survey data pipeline orchestrating raw document ingestion into MongoDB, automated Pandas/RapidFuzz cleaning and data quality validation, and idempotent loading into a PostgreSQL dimensional star schema using Docker Compose.*
 
+> **Live Interactive Demo:** [https://gets-defense-abu-jokes.trycloudflare.com](https://gets-defense-abu-jokes.trycloudflare.com) *(Cloudflare Public Tunnel)* • [GitHub Pages Web App](https://nishchayvashishtha.github.io/survey-data-pipeline/)
+
 > **Key Accomplishments & Measured Impact Bullets:**
 > - Engineered an automated ELT pipeline ingesting **86,000+ raw survey records (including 26,000+ real-world TidyTuesday survey submissions)** into a schema-flexible MongoDB lake, eliminating **3,000+ duplicate respondents** and routing **3,300+ invalid records** to an auditable dead-letter lake.
 > - Developed composable Pandas cleaning and RapidFuzz standardization algorithms, handling heterogeneous survey schemas and multi-state strings, and exploding **136,000+ multi-select answers** into a normalized relational bridge table.
 > - Implemented an automated Data Quality Suite enforcing **7 critical assertions** with zero-defect execution, mathematical row reconciliation ($\text{Raw} = \text{Clean} + \text{Rejected} + \text{Dups}$), and comprehensive Markdown audit generation.
 > - Optimized PostgreSQL warehouse queries across **80,000+ facts** via B-Tree indexes and single-pass window aggregates, achieving a **254.4x speedup (99.8% I/O buffer reduction)** on demographic filtering and a **23.0x speedup (83.7% I/O reduction)** by replacing correlated subqueries.
-> - Architected Docker Compose infrastructure with bash automation, cron scheduling, GitHub Actions CI, and **70.91% automated test coverage** across unit, validation, and idempotency test suites.
+> - Deployed an interactive full-featured analytics dashboard & metastore UI, featuring live query benchmarks, public opinion visualizations, and in-browser SQL query capabilities with **70.91% automated test coverage**.
 
 > **Technical Skills:**  
 > `Python (Pandas, NumPy, RapidFuzz)`, `PostgreSQL 16 (Star Schema, SQL Optimization, Window Functions, EXPLAIN ANALYZE)`, `MongoDB 7.0`, `Docker Compose`, `ETL / ELT Pipeline Architecture`, `Data Quality & Profiling`, `Bash Automation`, `Git / GitHub Actions CI`, `Pytest`.
