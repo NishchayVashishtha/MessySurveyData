@@ -222,13 +222,31 @@ A sample crontab configuration is provided in `scripts/crontab.sample`:
 
 ### Option D: Makefile Automation Targets
 ```bash
-make up       # Launch Docker Compose containers
-make down     # Stop containers and preserve volume data
-make run      # Execute pipeline on synthetic survey batch
-make test     # Run Pytest suite with coverage check (>= 70%)
-make lint     # Run Ruff linter and Black code format check
-make clean    # Remove temporary caches and logs
+make up        # Launch Docker Compose containers (MongoDB, PostgreSQL)
+make down      # Stop containers and preserve volume data
+make run       # Execute pipeline on synthetic survey batch
+make dashboard # Launch interactive Streamlit analytics & metastore UI on port 8501
+make deploy    # Full stack deployment: build image and launch databases + dashboard
+make test      # Run Pytest suite with coverage check (>= 70%)
+make lint      # Run Ruff linter and Black code format check
+make clean     # Remove temporary caches and logs
 ```
+
+### Option E: Interactive Analytics Dashboard & Production Deployment
+The pipeline includes a production-grade **Streamlit Analytics Dashboard** running on port `8501`:
+```bash
+# Launch dashboard locally
+python -m streamlit run src/survey_pipeline/dashboard.py --server.port 8501
+
+# Or deploy via Docker Compose
+docker compose up -d mongodb postgres dashboard
+```
+Access points:
+- **Interactive Analytics & Metastore Dashboard:** `http://localhost:8501`
+- **PostgreSQL Warehouse:** `localhost:5432` (`user: survey_engineer`, `db: survey_dw`)
+- **MongoDB Data Lake:** `localhost:27017` (`user: survey_admin`, `db: survey_raw_lake`)
+
+For complete deployment runbooks, multi-container architecture, cloud VM setup (AWS/GCP), and backup procedures, refer to [`docs/deployment.md`](docs/deployment.md).
 
 ---
 
@@ -332,6 +350,7 @@ survey-data-pipeline/
 │   ├── validate.py                # Rule-based Data Quality Suite and reconciliation assertion
 │   ├── load.py                    # Multi-store loading coordinator
 │   ├── metrics.py                 # Runtime performance and volume metrics tracker
+│   ├── dashboard.py               # Interactive Streamlit analytics & metastore web dashboard
 │   └── run.py                     # Rich CLI pipeline orchestrator
 ├── sql/                           # Relational DDL, indexes, and analytical queries
 │   ├── 01_init_schemas.sql        # Database schema definitions (warehouse, audit, analytics)
@@ -358,6 +377,7 @@ survey-data-pipeline/
 │   ├── architecture.md            # Detailed architecture and flow diagrams
 │   ├── erd.md                     # Entity-Relationship Diagram and physical index specifications
 │   ├── data_dictionary.md         # Exhaustive schema and column specifications
+│   ├── deployment.md              # Production deployment guide, Docker runbooks & cloud setups
 │   ├── query_optimization.md      # Measured SQL benchmark report with EXPLAIN plans
 │   ├── cleaning_report.md         # Automated before/after data profiling report
 │   └── data_quality_report.md     # Automated data quality audit results

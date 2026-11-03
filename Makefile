@@ -55,6 +55,12 @@ shell:
 
 restart: down up
 
+dashboard:
+	python -m streamlit run src/survey_pipeline/dashboard.py --server.port 8501
+
+deploy: build
+	docker compose up -d mongodb postgres dashboard
+
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name "*.py[cod]" -delete 2>/dev/null || true

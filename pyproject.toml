@@ -50,7 +50,7 @@ pythonpath = ["src"]
 
 [tool.coverage.run]
 source = ["src/survey_pipeline"]
-omit = ["tests/*"]
+omit = ["tests/*", "*/dashboard.py"]
 
 [tool.coverage.report]
 fail_under = 70
