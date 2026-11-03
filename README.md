@@ -2,9 +2,9 @@
 ### End-to-End Survey Data Engineering Pipeline: MongoDB Data Lake to PostgreSQL Star Schema
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-Cloudflare%20Public%20Tunnel-blueviolet?style=for-the-badge&logo=cloudflare)](https://gets-defense-abu-jokes.trycloudflare.com)
-[![GitHub Pages](https://img.shields.io/badge/Web%20App-GitHub%20Pages%20Live-success?style=for-the-badge&logo=github)](https://nishchayvashishtha.github.io/survey-data-pipeline/)
+[![GitHub Pages](https://img.shields.io/badge/Web%20App-GitHub%20Pages%20Live-success?style=for-the-badge&logo=github)](https://nishchayvashishtha.github.io/MessySurveyData/)
 
-[![CI Pipeline](https://github.com/nishchay-v/survey-data-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/nishchay-v/survey-data-pipeline/actions/workflows/ci.yml)
+[![CI Pipeline](https://github.com/NishchayVashishtha/MessySurveyData/actions/workflows/ci.yml/badge.svg)](https://github.com/NishchayVashishtha/MessySurveyData/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
 [![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16-336791.svg)](https://www.postgresql.org/)
 [![MongoDB 7.0](https://img.shields.io/badge/MongoDB-7.0-47A248.svg)](https://www.mongodb.com/)
@@ -173,8 +173,8 @@ Detailed documentation of all columns, data types, constraints, and indexes is a
 ### 7.2 Launch Containers
 ```bash
 # 1. Clone repository
-git clone https://github.com/nishchay-v/survey-data-pipeline.git
-cd survey-data-pipeline
+git clone https://github.com/NishchayVashishtha/MessySurveyData.git
+cd MessySurveyData
 
 # 2. Configure environment
 cp .env.example .env
@@ -414,7 +414,7 @@ survey-data-pipeline/
 > **Project Description (1 Line):**  
 > *Production-grade ELT survey data pipeline orchestrating raw document ingestion into MongoDB, automated Pandas/RapidFuzz cleaning and data quality validation, and idempotent loading into a PostgreSQL dimensional star schema using Docker Compose.*
 
-> **Live Interactive Demo:** [https://gets-defense-abu-jokes.trycloudflare.com](https://gets-defense-abu-jokes.trycloudflare.com) *(Cloudflare Public Tunnel)* • [GitHub Pages Web App](https://nishchayvashishtha.github.io/survey-data-pipeline/)
+> **Live Interactive Demo:** [https://gets-defense-abu-jokes.trycloudflare.com](https://gets-defense-abu-jokes.trycloudflare.com) *(Cloudflare Public Tunnel)* • [GitHub Pages Web App](https://nishchayvashishtha.github.io/MessySurveyData/)
 
 > **Key Accomplishments & Measured Impact Bullets:**
 > - Engineered an automated ELT pipeline ingesting **86,000+ raw survey records (including 26,000+ real-world TidyTuesday survey submissions)** into a schema-flexible MongoDB lake, eliminating **3,000+ duplicate respondents** and routing **3,300+ invalid records** to an auditable dead-letter lake.
