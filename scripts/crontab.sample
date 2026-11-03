@@ -1,0 +1,20 @@
+# ==============================================================================
+# crontab.sample
+# Production Cron Schedule Configuration for survey-data-pipeline
+# ==============================================================================
+# Format:
+# m h  dom mon dow   command
+
+# Set standard environment paths
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+PROJECT_DIR=/opt/survey-data-pipeline
+
+# 1. Run daily synthetic validation pipeline at 02:00 AM UTC
+0 2 * * * cd $PROJECT_DIR && ./scripts/run_pipeline.sh --source synthetic --batch-id auto >> /var/log/survey_pipeline_cron.log 2>&1
+
+# 2. Run weekly real-world survey sync and profiling every Monday at 04:00 AM UTC
+0 4 * * 1 cd $PROJECT_DIR && ./scripts/run_pipeline.sh --source real --force >> /var/log/survey_pipeline_weekly.log 2>&1
+
+# 3. Monthly database maintenance and vacuum analyze on first day of month at 01:00 AM
+0 1 1 * * docker exec -i survey_postgres vacuumdb -U survey_engineer -d survey_dw --analyze-in-stages >> /var/log/survey_vacuum.log 2>&1

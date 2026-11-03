@@ -385,12 +385,12 @@ def clean_survey_dataset(
                 rejection_reason = f"Rating {r} is outside allowed range [1, 5]."
                 failed_col = "rating_1_to_5"
 
-        # Check: Severe Age boundary violations (< 0 or > 130)
+        # Check: Severe Age boundary violations (< 10 or > 120)
         if not rule_name and pd.notna(row.get("age")):
             a = row["age"]
-            if a < 0 or a > 130:
+            if a < 10 or a > 120:
                 rule_name = "PLAUSIBLE_AGE_LIMIT"
-                rejection_reason = f"Age {a} is physically implausible."
+                rejection_reason = f"Age {a} is physically implausible for survey respondent (<10 or >120)."
                 failed_col = "age"
 
         if rule_name:

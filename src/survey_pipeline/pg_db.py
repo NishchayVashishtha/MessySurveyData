@@ -76,9 +76,15 @@ def upsert_dim_geography(df: pd.DataFrame, engine: Engine) -> Dict[str, int]:
             zone = EXCLUDED.zone;
     """)
 
-    # Extract unique state records
-    geo_df = df[["state", "region"]].dropna(subset=["state"]).drop_duplicates(subset=["state"])
+    # Always ensure Unknown fallback exists
     with engine.begin() as conn:
+        conn.execute(
+            insert_sql,
+            {"state_name": "Unknown / Not Provided", "state_code": "UNK", "region": "Unknown", "zone": "Unknown"}
+        )
+
+        # Extract unique state records
+        geo_df = df[["state", "region"]].dropna(subset=["state"]).drop_duplicates(subset=["state"])
         for _, row in geo_df.iterrows():
             conn.execute(
                 insert_sql,
@@ -107,8 +113,10 @@ def upsert_dim_occupation(df: pd.DataFrame, engine: Engine) -> Dict[str, int]:
         DO NOTHING;
     """)
 
-    occ_df = df[["occupation"]].dropna().drop_duplicates()
     with engine.begin() as conn:
+        conn.execute(insert_sql, {"occupation_title": "Unknown / Not Provided", "occupation_category": "Unknown"})
+
+        occ_df = df[["occupation"]].dropna().drop_duplicates()
         for _, row in occ_df.iterrows():
             title = str(row["occupation"]).strip()
             conn.execute(
@@ -132,8 +140,10 @@ def upsert_dim_education(df: pd.DataFrame, engine: Engine) -> Dict[str, int]:
         DO NOTHING;
     """)
 
-    edu_df = df[["education"]].dropna().drop_duplicates()
     with engine.begin() as conn:
+        conn.execute(insert_sql, {"education_level": "Unknown / Not Provided", "education_tier": "Unknown"})
+
+        edu_df = df[["education"]].dropna().drop_duplicates()
         for _, row in edu_df.iterrows():
             level = str(row["education"]).strip()
             tier = "Higher Education" if any(w in level.lower() for w in ["bachelor", "master", "phd", "doctorate"]) else "Secondary"
@@ -204,21 +214,10 @@ def upsert_fact_responses(
     """
     logger.info("Upserting %d fact responses into warehouse.fact_responses...", len(df))
 
-    # Ensure fallback keys exist for missing foreign references
-    with engine.begin() as conn:
-        conn.execute(text("""
-            INSERT INTO warehouse.dim_geography (geography_key, state_name, state_code, region, zone)
-            VALUES (0, 'Unknown / Not Provided', 'UNK', 'Unknown', 'Unknown')
-            ON CONFLICT (geography_key) DO NOTHING;
-            
-            INSERT INTO warehouse.dim_occupation (occupation_key, occupation_title, occupation_category)
-            VALUES (0, 'Unknown / Not Provided', 'Unknown')
-            ON CONFLICT (occupation_key) DO NOTHING;
-            
-            INSERT INTO warehouse.dim_education (education_key, education_level, education_tier)
-            VALUES (0, 'Unknown / Not Provided', 'Unknown')
-            ON CONFLICT (education_key) DO NOTHING;
-        """))
+    default_geo_key = geo_map.get("Unknown / Not Provided", next(iter(geo_map.values())) if geo_map else 1)
+    default_occ_key = occ_map.get("Unknown / Not Provided", next(iter(occ_map.values())) if occ_map else 1)
+    default_edu_key = edu_map.get("Unknown / Not Provided", next(iter(edu_map.values())) if edu_map else 1)
+    default_resp_key = next(iter(resp_map.values())) if resp_map else 1
 
     upsert_sql = text("""
         INSERT INTO warehouse.fact_responses (
@@ -260,10 +259,10 @@ def upsert_fact_responses(
 
         records_to_insert.append({
             "natural_response_id": f"{resp_id}_{batch_id}",
-            "respondent_key": resp_map.get(resp_id, 0),
-            "geography_key": geo_map.get(state, 0),
-            "occupation_key": occ_map.get(occ, 0),
-            "education_key": edu_map.get(edu, 0),
+            "respondent_key": resp_map.get(resp_id, default_resp_key),
+            "geography_key": geo_map.get(state, default_geo_key),
+            "occupation_key": occ_map.get(occ, default_occ_key),
+            "education_key": edu_map.get(edu, default_edu_key),
             "batch_id": batch_id,
             "source_file": source_file,
             "response_date": row["response_date"] if pd.notna(row.get("response_date")) else "2024-01-01",
@@ -292,29 +291,49 @@ def upsert_fact_responses(
 def upsert_fact_choices(
     choices: List[Dict[str, Any]],
     engine: Engine,
+    batch_id: Optional[str] = None,
 ) -> int:
-    """Loads exploded multi-select choices into warehouse.fact_response_choices."""
+    """Loads exploded multi-select choices into warehouse.fact_response_choices with high throughput."""
     if not choices:
         return 0
 
     logger.debug("Loading %d multi-select choices...", len(choices))
+
+    # Pre-fetch response_id map for batch to achieve sub-second bulk insert
+    with engine.connect() as conn:
+        if batch_id:
+            res = conn.execute(
+                text("SELECT natural_response_id, response_id FROM warehouse.fact_responses WHERE batch_id = :b;"),
+                {"b": batch_id},
+            )
+        else:
+            res = conn.execute(text("SELECT natural_response_id, response_id FROM warehouse.fact_responses;"))
+        id_map = {row[0]: row[1] for row in res.fetchall()}
+
     insert_sql = text("""
         INSERT INTO warehouse.fact_response_choices (response_id, choice_category, choice_value)
-        VALUES (
-            (SELECT response_id FROM warehouse.fact_responses WHERE natural_response_id = :natural_response_id),
-            :choice_category,
-            :choice_value
-        )
+        VALUES (:response_id, :choice_category, :choice_value)
         ON CONFLICT (response_id, choice_category, choice_value) DO NOTHING;
     """)
 
-    chunk_size = 2000
+    records = []
+    for c in choices:
+        nat_id = c["natural_response_id"]
+        if nat_id in id_map:
+            records.append({
+                "response_id": id_map[nat_id],
+                "choice_category": c["choice_category"],
+                "choice_value": c["choice_value"],
+            })
+
+    chunk_size = 5000
     with engine.begin() as conn:
-        for i in range(0, len(choices), chunk_size):
-            chunk = choices[i : i + chunk_size]
+        for i in range(0, len(records), chunk_size):
+            chunk = records[i : i + chunk_size]
             conn.execute(insert_sql, chunk)
 
-    return len(choices)
+    logger.info("Successfully loaded %d multi-select choices into bridge table.", len(records))
+    return len(records)
 
 
 def record_audit_pipeline_run(engine: Engine, metrics: Dict[str, Any]) -> None:
@@ -356,20 +375,43 @@ def record_rejected_rows_pg(engine: Engine, rejected_rows: List[Dict[str, Any]])
     if not rejected_rows:
         return 0
 
+    import json
+
     sql = text("""
         INSERT INTO audit.rejected_rows (
             batch_id, natural_respondent_id, rule_failed, severity, failed_column,
             invalid_value, error_reason, raw_payload
         ) VALUES (
             :batch_id, :natural_respondent_id, :rule_failed, :severity, :failed_column,
-            :invalid_value, :error_reason, :raw_payload::jsonb
+            :invalid_value, :error_reason, CAST(:raw_payload AS jsonb)
         );
     """)
 
-    with engine.begin() as conn:
-        conn.execute(sql, rejected_rows)
+    formatted_rows = []
+    for r in rejected_rows:
+        payload = r.get("raw_payload")
+        if isinstance(payload, dict):
+            # Clean np.nan / float('nan') into None so it serializes to valid JSON null
+            cleaned_dict = {k: (None if pd.isna(v) else v) for k, v in payload.items()}
+            payload_str = json.dumps(cleaned_dict, default=str)
+        else:
+            payload_str = str(payload) if payload else "{}"
 
-    return len(rejected_rows)
+        formatted_rows.append({
+            "batch_id": r["batch_id"],
+            "natural_respondent_id": r.get("natural_respondent_id"),
+            "rule_failed": r["rule_failed"],
+            "severity": r.get("severity", "ERROR"),
+            "failed_column": r.get("failed_column"),
+            "invalid_value": str(r.get("invalid_value", "")),
+            "error_reason": r["error_reason"],
+            "raw_payload": payload_str,
+        })
+
+    with engine.begin() as conn:
+        conn.execute(sql, formatted_rows)
+
+    return len(formatted_rows)
 
 
 def record_data_quality_results_pg(engine: Engine, dq_results: List[Dict[str, Any]]) -> int:

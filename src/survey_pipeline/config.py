@@ -26,11 +26,23 @@ class MongoSettings(BaseSettings):
     auth_source: str = Field(default="admin")
 
     @property
+    def resolved_host(self) -> str:
+        """Resolves host, falling back to WSL IP if localhost authentication proxy is blocked."""
+        h = self.host
+        if h in ("localhost", "127.0.0.1") and os.name == "nt":
+            # Check if WSL host is accessible
+            wsl_ip = os.environ.get("WSL_HOST_IP")
+            if wsl_ip:
+                return wsl_ip
+        return h
+
+    @property
     def uri(self) -> str:
         """Construct standard MongoDB connection URI."""
+        h = self.resolved_host
         if self.user and self.password:
-            return f"mongodb://{self.user}:{self.password}@{self.host}:{self.port}/{self.db}?authSource={self.auth_source}"
-        return f"mongodb://{self.host}:{self.port}/{self.db}"
+            return f"mongodb://{self.user}:{self.password}@{h}:{self.port}/{self.db}?authSource={self.auth_source}&authMechanism=SCRAM-SHA-256"
+        return f"mongodb://{h}:{self.port}/{self.db}"
 
 
 class PostgresSettings(BaseSettings):
@@ -45,9 +57,20 @@ class PostgresSettings(BaseSettings):
     db: str = Field(default="survey_dw")
 
     @property
+    def resolved_host(self) -> str:
+        """Resolves host, falling back to WSL IP if on Windows and WSL host IP is set."""
+        h = self.host
+        if h in ("localhost", "127.0.0.1") and os.name == "nt":
+            wsl_ip = os.environ.get("WSL_HOST_IP")
+            if wsl_ip:
+                return wsl_ip
+        return h
+
+    @property
     def url(self) -> str:
         """Construct SQLAlchemy-compatible PostgreSQL connection string."""
-        return f"postgresql+psycopg2://{self.user}:{self.password}@{self.host}:{self.port}/{self.db}"
+        h = self.resolved_host
+        return f"postgresql+psycopg2://{self.user}:{self.password}@{h}:{self.port}/{self.db}"
 
 
 class PipelineSettings(BaseSettings):
