@@ -92,17 +92,24 @@ def upsert_dim_geography(df: pd.DataFrame, engine: Engine) -> dict[str, int]:
         )
 
         # Extract unique state records
-        geo_df = df[["state", "region"]].dropna(subset=["state"]).drop_duplicates(subset=["state"])
-        for _, row in geo_df.iterrows():
-            conn.execute(
-                insert_sql,
-                {
-                    "state_name": str(row["state"]),
-                    "state_code": str(row["state"])[:3].upper(),
-                    "region": str(row["region"]) if pd.notna(row["region"]) else "Other",
-                    "zone": None,
-                },
-            )
+        if "state" in df.columns:
+            region_col = "region" if "region" in df.columns else None
+            subset_cols = ["state", "region"] if region_col else ["state"]
+            geo_df = df[subset_cols].dropna(subset=["state"]).drop_duplicates(subset=["state"])
+            for _, row in geo_df.iterrows():
+                state_val = str(row["state"]).strip()[:95]
+                region_val = (
+                    str(row["region"]) if region_col and pd.notna(row.get("region")) else "Other"
+                )
+                conn.execute(
+                    insert_sql,
+                    {
+                        "state_name": state_val,
+                        "state_code": state_val[:3].upper(),
+                        "region": region_val,
+                        "zone": None,
+                    },
+                )
 
         # Retrieve mapped surrogate keys
         res = conn.execute(text("SELECT state_name, geography_key FROM warehouse.dim_geography;"))
@@ -127,13 +134,14 @@ def upsert_dim_occupation(df: pd.DataFrame, engine: Engine) -> dict[str, int]:
             {"occupation_title": "Unknown / Not Provided", "occupation_category": "Unknown"},
         )
 
-        occ_df = df[["occupation"]].dropna().drop_duplicates()
-        for _, row in occ_df.iterrows():
-            title = str(row["occupation"]).strip()
-            conn.execute(
-                insert_sql,
-                {"occupation_title": title, "occupation_category": "General"},
-            )
+        if "occupation" in df.columns:
+            occ_df = df[["occupation"]].dropna().drop_duplicates()
+            for _, row in occ_df.iterrows():
+                title = str(row["occupation"]).strip()[:95]
+                conn.execute(
+                    insert_sql,
+                    {"occupation_title": title, "occupation_category": "General"},
+                )
 
         res = conn.execute(
             text("SELECT occupation_title, occupation_key FROM warehouse.dim_occupation;")
@@ -158,18 +166,19 @@ def upsert_dim_education(df: pd.DataFrame, engine: Engine) -> dict[str, int]:
             insert_sql, {"education_level": "Unknown / Not Provided", "education_tier": "Unknown"}
         )
 
-        edu_df = df[["education"]].dropna().drop_duplicates()
-        for _, row in edu_df.iterrows():
-            level = str(row["education"]).strip()
-            tier = (
-                "Higher Education"
-                if any(w in level.lower() for w in ["bachelor", "master", "phd", "doctorate"])
-                else "Secondary"
-            )
-            conn.execute(
-                insert_sql,
-                {"education_level": level, "education_tier": tier},
-            )
+        if "education" in df.columns:
+            edu_df = df[["education"]].dropna().drop_duplicates()
+            for _, row in edu_df.iterrows():
+                level = str(row["education"]).strip()[:95]
+                tier = (
+                    "Higher Education"
+                    if any(w in level.lower() for w in ["bachelor", "master", "phd", "doctorate"])
+                    else "Secondary"
+                )
+                conn.execute(
+                    insert_sql,
+                    {"education_level": level, "education_tier": tier},
+                )
 
         res = conn.execute(
             text("SELECT education_level, education_key FROM warehouse.dim_education;")
@@ -197,20 +206,27 @@ def upsert_dim_respondent(df: pd.DataFrame, engine: Engine, batch_id: str) -> di
             updated_at = CURRENT_TIMESTAMP;
     """)
 
-    resp_df = df[["respondent_id", "gender", "age", "age_group", "district"]].drop_duplicates(
-        subset=["respondent_id"]
-    )
+    resp_cols = ["respondent_id", "gender", "age", "age_group", "district"]
+    for c in resp_cols:
+        if c not in df.columns:
+            df[c] = None
+
+    resp_df = df[resp_cols].drop_duplicates(subset=["respondent_id"])
     with engine.begin() as conn:
         for _, row in resp_df.iterrows():
             conn.execute(
                 insert_sql,
                 {
-                    "natural_respondent_id": str(row["respondent_id"]),
-                    "gender": str(row["gender"]) if pd.notna(row["gender"]) else None,
+                    "natural_respondent_id": str(row["respondent_id"])[:95],
+                    "gender": str(row["gender"]).strip()[:45] if pd.notna(row["gender"]) else None,
                     "age": int(row["age"]) if pd.notna(row["age"]) else None,
-                    "age_group": str(row["age_group"]) if pd.notna(row["age_group"]) else None,
-                    "district": str(row["district"]) if pd.notna(row["district"]) else None,
-                    "first_seen_batch_id": batch_id,
+                    "age_group": (
+                        str(row["age_group"]).strip()[:45] if pd.notna(row["age_group"]) else None
+                    ),
+                    "district": (
+                        str(row["district"]).strip()[:95] if pd.notna(row["district"]) else None
+                    ),
+                    "first_seen_batch_id": batch_id[:95],
                 },
             )
 
@@ -301,13 +317,17 @@ def upsert_fact_responses(
                     row["response_date"] if pd.notna(row.get("response_date")) else "2024-01-01"
                 ),
                 "party_preference": (
-                    str(row["party_preference"]) if pd.notna(row.get("party_preference")) else None
+                    str(row["party_preference"]).strip()[:95]
+                    if pd.notna(row.get("party_preference"))
+                    else None
                 ),
                 "monthly_income": (
                     float(row["monthly_income"]) if pd.notna(row.get("monthly_income")) else None
                 ),
                 "income_bracket": (
-                    str(row["income_bracket"]) if pd.notna(row.get("income_bracket")) else None
+                    str(row["income_bracket"]).strip()[:45]
+                    if pd.notna(row.get("income_bracket"))
+                    else None
                 ),
                 "rating_1_to_5": (
                     int(row["rating_1_to_5"]) if pd.notna(row.get("rating_1_to_5")) else None

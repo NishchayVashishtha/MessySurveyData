@@ -316,6 +316,37 @@ def clean_survey_dataset(
     # 2. Column Normalization
     df = normalize_column_names(df_raw)
 
+    # Map common survey field synonyms to standard canonical names
+    field_synonyms = {
+        "job_title": "occupation",
+        "highest_level_of_education_completed": "education",
+        "city": "district",
+        "timestamp": "response_date",
+        "annual_salary": "monthly_income",
+        "how_old_are_you": "age_group",
+    }
+    for orig_col, target_col in field_synonyms.items():
+        if orig_col in df.columns and target_col not in df.columns:
+            df[target_col] = df[orig_col]
+
+    # Ensure standard schema columns exist on df with default None
+    standard_columns = [
+        "age",
+        "gender",
+        "district",
+        "state",
+        "occupation",
+        "education",
+        "party_preference",
+        "monthly_income",
+        "rating_1_to_5",
+        "response_date",
+        "free_text_comment",
+    ]
+    for sc in standard_columns:
+        if sc not in df.columns:
+            df[sc] = None
+
     # 3. Text & Unicode Normalization
     for col in df.columns:
         if df[col].dtype == object or pd.api.types.is_string_dtype(df[col]):

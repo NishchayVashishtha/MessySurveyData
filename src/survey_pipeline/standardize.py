@@ -75,7 +75,17 @@ class Standardizer:
         if not raw_val or pd.isna(raw_val):
             return ("Unknown / Not Provided", "UNK", "Other", "Unknown")
 
-        cleaned = str(raw_val).strip().lower().replace(".", "").replace("-", " ")
+        raw_str = str(raw_val).strip()
+        # Handle comma-separated multiple states entered in a single field
+        if "," in raw_str:
+            parts = [p.strip() for p in raw_str.split(",") if p.strip()]
+            if len(parts) > 1:
+                first_clean = parts[0].lower().replace(".", "").replace("-", " ")
+                if first_clean in self.state_lookup:
+                    return self.state_lookup[first_clean]
+                return ("Multiple States / Other", "MULTI", "Other", "Unknown")
+
+        cleaned = raw_str.lower().replace(".", "").replace("-", " ")
         if cleaned in self.state_lookup:
             return self.state_lookup[cleaned]
 
@@ -85,7 +95,8 @@ class Standardizer:
             if match and match[1] >= self.threshold:
                 return self.state_lookup[match[0]]
 
-        return (str(raw_val).title().strip(), "OTH", "Other", "Unknown")
+        safe_name = raw_str[:80].title().strip()
+        return (safe_name, "OTH", "Other", "Unknown")
 
     @lru_cache(maxsize=4096)
     def match_party(self, raw_val: str | None) -> tuple[str, str]:
@@ -93,7 +104,8 @@ class Standardizer:
         if not raw_val or pd.isna(raw_val):
             return ("None / Undecided", "UNDECIDED")
 
-        cleaned = str(raw_val).strip().lower().replace(".", "")
+        raw_str = str(raw_val).strip()
+        cleaned = raw_str.lower().replace(".", "")
         if cleaned in self.party_lookup:
             return self.party_lookup[cleaned]
 
@@ -102,7 +114,8 @@ class Standardizer:
             if match and match[1] >= self.threshold:
                 return self.party_lookup[match[0]]
 
-        return (str(raw_val).strip(), "OTHER")
+        safe_party = raw_str[:80].strip()
+        return (safe_party, "OTHER")
 
     @lru_cache(maxsize=4096)
     def match_education(self, raw_val: str | None) -> tuple[str, str]:
@@ -110,7 +123,8 @@ class Standardizer:
         if not raw_val or pd.isna(raw_val):
             return ("Unknown / Not Specified", "Unknown")
 
-        cleaned = str(raw_val).strip().lower().replace(".", "")
+        raw_str = str(raw_val).strip()
+        cleaned = raw_str.lower().replace(".", "")
         if cleaned in self.edu_lookup:
             return self.edu_lookup[cleaned]
 
@@ -119,7 +133,8 @@ class Standardizer:
             if match and match[1] >= self.threshold:
                 return self.edu_lookup[match[0]]
 
-        return (str(raw_val).title().strip(), "Secondary")
+        safe_edu = raw_str[:80].title().strip()
+        return (safe_edu, "Secondary")
 
     @lru_cache(maxsize=4096)
     def match_occupation(self, raw_val: str | None) -> tuple[str, str]:
@@ -127,7 +142,8 @@ class Standardizer:
         if not raw_val or pd.isna(raw_val):
             return ("Unknown / Not Provided", "Other")
 
-        cleaned = str(raw_val).strip().lower().replace(".", "")
+        raw_str = str(raw_val).strip()
+        cleaned = raw_str.lower().replace(".", "")
         if cleaned in self.occ_lookup:
             return self.occ_lookup[cleaned]
 
@@ -136,7 +152,8 @@ class Standardizer:
             if match and match[1] >= self.threshold:
                 return self.occ_lookup[match[0]]
 
-        return (str(raw_val).title().strip(), "General")
+        safe_occ = raw_str[:80].title().strip()
+        return (safe_occ, "General")
 
     @staticmethod
     def standardize_gender(raw_val: str | None) -> str:

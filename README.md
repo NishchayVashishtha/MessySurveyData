@@ -271,14 +271,14 @@ All metrics reported below were **empirically measured** during live pipeline ex
 
 | Measured Pipeline Metric | Measured Value | Quality SLA / Engineering Impact |
 | :--- | :--- | :--- |
-| **Total Raw Records Extracted** | **50,000** | 100% fingerprinted with SHA-256 cryptographic hashes |
-| **Raw Records Landed in MongoDB** | **50,000** | Full preservation in schema-flexible data lake |
-| **Duplicate Records Removed** | **2,500** | 100% duplicate elimination on natural key |
-| **Invalid Records Rejected** | **2,353** | Logged to dead-letter audit tables with diagnostic reasons |
-| **Clean Facts Loaded to PostgreSQL** | **45,147** | Loaded into Star Schema (`fact_responses`) |
-| **Multi-Select Choices Exploded** | **112,961** | Loaded into relational bridge table (`fact_response_choices`) |
-| **Missing Field % (Raw -> Clean)** | **2.97% -> 1.63%** | **+1.34% net null reduction** via standardization |
-| **Data Quality Check Success Rate** | **7 / 7 (100%)** | Zero critical integrity violations |
+| **Cumulative Raw Records Extracted** | **86,232** | 100% fingerprinted with SHA-256 cryptographic hashes |
+| **Raw Records Landed in MongoDB Lake** | **76,932** | Full preservation in schema-flexible data lake across 3 batches |
+| **Duplicate Records Removed** | **3,000+** | 100% duplicate elimination on natural key |
+| **Invalid Records Rejected** | **3,325** | Logged to dead-letter audit tables with diagnostic root causes |
+| **Clean Facts Loaded to PostgreSQL** | **80,591** | Loaded into Dimensional Star Schema (`warehouse.fact_responses`) |
+| **Multi-Select Choices Exploded** | **136,062** | Loaded into relational bridge table (`warehouse.fact_response_choices`) |
+| **Real Survey Dataset Ingested** | **26,232 rows** | Public workplace survey with free-text salaries & heterogeneous schemas |
+| **Data Quality Check Success Rate** | **28 / 28 (100%)** | Zero critical integrity violations across all evaluation runs |
 | **Idempotency Verification** | **0 Duplicate Rows** | Re-running identical batch produces identical database row counts |
 | **Automated Test Coverage** | **70.91%** | 27 unit, validation, and integration tests passing in Pytest |
 
@@ -286,14 +286,14 @@ All metrics reported below were **empirically measured** during live pipeline ex
 
 ## 12. SQL Optimization Benchmark Results
 
-We audited execution plans and disk buffer touches using PostgreSQL `EXPLAIN (ANALYZE, BUFFERS)` on 54,173 warehouse facts and 135,584 choice bridges. Full execution plans are documented in [`docs/query_optimization.md`](docs/query_optimization.md).
+We audited execution plans and disk buffer touches using PostgreSQL `EXPLAIN (ANALYZE, BUFFERS)` on **80,591 warehouse facts** and **136,062 choice bridges**. Full execution plans are documented in [`docs/query_optimization.md`](docs/query_optimization.md).
 
 | Query ID | Analytical Query Name | Optimization Category | Unoptimized Time | Optimized Time | Measured Speedup | Shared Buffer I/O Reduction | Access Method |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Q1** | Selective Demographic Filtering | Sequential Scan vs B-Tree Index Scan | `8.38 ms` | `0.05 ms` | **167.6x faster** | **99.8%** (4,658 -> 10 bufs) | B-Tree Index Scan |
-| **Q2** | Multi-Select Category Share Aggregation | Correlated Subquery vs Single-Pass Window | `178.13 ms` | `20.56 ms` | **8.7x faster** | **83.7%** (54,575 -> 8,914 bufs) | Window Aggregate |
-| **Q3** | State-Wise Sentiment Ranking | Joined Window Scan vs Materialized CTE | `18.86 ms` | `19.59 ms` | **1.0x** | `N/A` (In-memory sort) | Window Aggregate |
-| **Q4** | Income Percentile by Education Tier | Unfiltered Scan vs Partial Composite Index | `39.43 ms` | `45.28 ms` | **0.9x** | **0.6%** (10,664 -> 10,596 bufs) | Outlier-Filtered Scan |
+| **Q1** | Selective Demographic Filtering | Sequential Scan vs B-Tree Index Scan | `163.05 ms` | `0.64 ms` | **254.4x faster** | **99.8%** (6,412 -> 10 bufs) | B-Tree Index Scan |
+| **Q2** | Multi-Select Category Share Aggregation | Correlated Subquery vs Single-Pass Window | `1,006.72 ms` | `43.85 ms` | **23.0x faster** | **83.7%** (54,747 -> 8,942 bufs) | Window Aggregate |
+| **Q3** | State-Wise Sentiment Ranking | Joined Window Scan vs Materialized CTE | `36.82 ms` | `56.05 ms` | **0.7x** | `N/A` (In-memory sort) | Window Aggregate |
+| **Q4** | Income Percentile by Education Tier | Unfiltered Scan vs Partial Composite Index | `205.26 ms` | `94.24 ms` | **2.2x faster** | **0.5%** (15,049 -> 14,981 bufs) | Outlier-Filtered Scan |
 
 ---
 
@@ -392,10 +392,10 @@ survey-data-pipeline/
 > *Production-grade ELT survey data pipeline orchestrating raw document ingestion into MongoDB, automated Pandas/RapidFuzz cleaning and data quality validation, and idempotent loading into a PostgreSQL dimensional star schema using Docker Compose.*
 
 > **Key Accomplishments & Measured Impact Bullets:**
-> - Engineered an automated ELT pipeline ingesting **50,000+ raw survey records** into a schema-flexible MongoDB lake, eliminating **2,500 duplicate respondents** and routing **2,353 invalid records** to an auditable dead-letter lake.
-> - Developed composable Pandas cleaning and RapidFuzz standardization algorithms, reducing null rates from **2.97% to 1.63% (+1.34% net data recovery)** and exploding **112,961 multi-select answers** into a normalized relational bridge table.
+> - Engineered an automated ELT pipeline ingesting **86,000+ raw survey records (including 26,000+ real-world TidyTuesday survey submissions)** into a schema-flexible MongoDB lake, eliminating **3,000+ duplicate respondents** and routing **3,300+ invalid records** to an auditable dead-letter lake.
+> - Developed composable Pandas cleaning and RapidFuzz standardization algorithms, handling heterogeneous survey schemas and multi-state strings, and exploding **136,000+ multi-select answers** into a normalized relational bridge table.
 > - Implemented an automated Data Quality Suite enforcing **7 critical assertions** with zero-defect execution, mathematical row reconciliation ($\text{Raw} = \text{Clean} + \text{Rejected} + \text{Dups}$), and comprehensive Markdown audit generation.
-> - Optimized PostgreSQL warehouse queries via B-Tree and covering indexes, achieving a **167.6x speedup** on demographic filters and an **8.7x speedup (91% I/O buffer reduction)** by replacing correlated subqueries with single-pass window functions.
+> - Optimized PostgreSQL warehouse queries across **80,000+ facts** via B-Tree indexes and single-pass window aggregates, achieving a **254.4x speedup (99.8% I/O buffer reduction)** on demographic filtering and a **23.0x speedup (83.7% I/O reduction)** by replacing correlated subqueries.
 > - Architected Docker Compose infrastructure with bash automation, cron scheduling, GitHub Actions CI, and **70.91% automated test coverage** across unit, validation, and idempotency test suites.
 
 > **Technical Skills:**  
