@@ -1,0 +1,67 @@
+raw_pattern,canonical_name,state_code,region,zone
+uttar pradesh,Uttar Pradesh,UP,North,Central
+u.p.,Uttar Pradesh,UP,North,Central
+up,Uttar Pradesh,UP,North,Central
+utar pradesh,Uttar Pradesh,UP,North,Central
+maharashtra,Maharashtra,MH,West,West
+mh,Maharashtra,MH,West,West
+maharastra,Maharashtra,MH,West,West
+m.h.,Maharashtra,MH,West,West
+karnataka,Karnataka,KA,South,South
+ka,Karnataka,KA,South,South
+karnatak,Karnataka,KA,South,South
+k.a.,Karnataka,KA,South,South
+tamil nadu,Tamil Nadu,TN,South,South
+tn,Tamil Nadu,TN,South,South
+tamilnadu,Tamil Nadu,TN,South,South
+t.n.,Tamil Nadu,TN,South,South
+delhi,Delhi,DL,North,North
+dl,Delhi,DL,North,North
+new delhi,Delhi,DL,North,North
+d.l.,Delhi,DL,North,North
+west bengal,West Bengal,WB,East,East
+wb,West Bengal,WB,East,East
+west bangal,West Bengal,WB,East,East
+w.b.,West Bengal,WB,East,East
+rajasthan,Rajasthan,RJ,North,West
+rj,Rajasthan,RJ,North,West
+rajastan,Rajasthan,RJ,North,West
+gujarat,Gujarat,GJ,West,West
+gj,Gujarat,GJ,West,West
+gujarath,Gujarat,GJ,West,West
+bihar,Bihar,BR,East,East
+br,Bihar,BR,East,East
+madhya pradesh,Madhya Pradesh,MP,Central,Central
+mp,Madhya Pradesh,MP,Central,Central
+m.p.,Madhya Pradesh,MP,Central,Central
+telangana,Telangana,TG,South,South
+tg,Telangana,TG,South,South
+ts,Telangana,TG,South,South
+kerala,Kerala,KL,South,South
+kl,Kerala,KL,South,South
+punjab,Punjab,PB,North,North
+pb,Punjab,PB,North,North
+haryana,Haryana,HR,North,North
+hr,Haryana,HR,North,North
+odisha,Odisha,OD,East,East
+orissa,Odisha,OD,East,East
+od,Odisha,OD,East,East
+assam,Assam,AS,North-East,North-East
+as,Assam,AS,North-East,North-East
+andhra pradesh,Andhra Pradesh,AP,South,South
+ap,Andhra Pradesh,AP,South,South
+a.p.,Andhra Pradesh,AP,South,South
+jharkhand,Jharkhand,JH,East,East
+jh,Jharkhand,JH,East,East
+chhattisgarh,Chhattisgarh,CG,Central,Central
+cg,Chhattisgarh,CG,Central,Central
+chhatisgarh,Chhattisgarh,CG,Central,Central
+uttarakhand,Uttarakhand,UK,North,North
+uk,Uttarakhand,UK,North,North
+himachal pradesh,Himachal Pradesh,HP,North,North
+hp,Himachal Pradesh,HP,North,North
+goa,Goa,GA,West,West
+ga,Goa,GA,West,West
+jammu and kashmir,Jammu and Kashmir,JK,North,North
+jk,Jammu and Kashmir,JK,North,North
+j&k,Jammu and Kashmir,JK,North,North

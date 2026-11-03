@@ -1,0 +1,33 @@
+raw_pattern,canonical_name,occupation_category
+software engineer,Software Engineer,Technology
+developer,Software Engineer,Technology
+programmer,Software Engineer,Technology
+data scientist,Data Scientist,Technology
+data analyst,Data Analyst,Technology
+engineer,Engineer,Engineering
+student,Student,Education
+studying,Student,Education
+teacher,Teacher / Educator,Education
+professor,Teacher / Educator,Education
+government employee,Government Service,Public Sector
+govt employee,Government Service,Public Sector
+civil servant,Government Service,Public Sector
+business owner,Business Owner / Entrepreneur,Self-Employed
+businessman,Business Owner / Entrepreneur,Self-Employed
+entrepreneur,Business Owner / Entrepreneur,Self-Employed
+shopkeeper,Small Business Owner,Self-Employed
+farmer,Agriculture / Farming,Agriculture
+agriculture,Agriculture / Farming,Agriculture
+kisan,Agriculture / Farming,Agriculture
+homemaker,Homemaker,Household
+housewife,Homemaker,Household
+unemployed,Unemployed / Seeking Work,Unemployed
+retired,Retired,Retired
+doctor,Healthcare Professional,Healthcare
+nurse,Healthcare Professional,Healthcare
+lawyer,Legal Professional,Legal
+advocate,Legal Professional,Legal
+sales,Sales & Marketing,Commerce
+marketing,Sales & Marketing,Commerce
+driver,Transport & Logistics,Services
+other,Other / Freelance,Other

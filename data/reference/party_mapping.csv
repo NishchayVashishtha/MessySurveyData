@@ -1,0 +1,30 @@
+raw_pattern,canonical_name,party_code
+bjp,Bharatiya Janata Party,BJP
+bharatiya janata party,Bharatiya Janata Party,BJP
+b.j.p.,Bharatiya Janata Party,BJP
+bhartiya janata party,Bharatiya Janata Party,BJP
+inc,Indian National Congress,INC
+congress,Indian National Congress,INC
+indian national congress,Indian National Congress,INC
+i.n.c.,Indian National Congress,INC
+aap,Aam Aadmi Party,AAP
+aam aadmi party,Aam Aadmi Party,AAP
+a.a.p.,Aam Aadmi Party,AAP
+tmc,Trinamool Congress,TMC
+all india trinamool congress,Trinamool Congress,TMC
+aitc,Trinamool Congress,TMC
+sp,Samajwadi Party,SP
+samajwadi party,Samajwadi Party,SP
+bsp,Bahujan Samaj Party,BSP
+bahujan samaj party,Bahujan Samaj Party,BSP
+dmk,Dravida Munnetra Kazhagam,DMK
+dravida munnetra kazhagam,Dravida Munnetra Kazhagam,DMK
+aiadmk,All India Anna Dravida Munnetra Kazhagam,AIADMK
+cpi(m),Communist Party of India (Marxist),CPIM
+cpim,Communist Party of India (Marxist),CPIM
+independent,Independent,IND
+ind,Independent,IND
+none,None / Undecided,UNDECIDED
+undecided,None / Undecided,UNDECIDED
+nota,None of the Above,NOTA
+other,Other,OTHER

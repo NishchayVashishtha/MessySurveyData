@@ -1,0 +1,39 @@
+raw_pattern,canonical_name,education_tier
+high school,High School / Secondary,Secondary
+10th pass,High School / Secondary,Secondary
+12th pass,Senior Secondary,Secondary
+senior secondary,Senior Secondary,Secondary
+intermediate,Senior Secondary,Secondary
+bachelor,Bachelor's Degree,Higher Education
+bachelors,Bachelor's Degree,Higher Education
+b.tech,Bachelor's Degree,Higher Education
+btech,Bachelor's Degree,Higher Education
+b.e.,Bachelor's Degree,Higher Education
+be,Bachelor's Degree,Higher Education
+b.sc,Bachelor's Degree,Higher Education
+bsc,Bachelor's Degree,Higher Education
+b.a.,Bachelor's Degree,Higher Education
+ba,Bachelor's Degree,Higher Education
+b.com,Bachelor's Degree,Higher Education
+bcom,Bachelor's Degree,Higher Education
+undergraduate,Bachelor's Degree,Higher Education
+college graduate,Bachelor's Degree,Higher Education
+master,Master's Degree,Higher Education
+masters,Master's Degree,Higher Education
+m.tech,Master's Degree,Higher Education
+mtech,Master's Degree,Higher Education
+m.sc,Master's Degree,Higher Education
+msc,Master's Degree,Higher Education
+m.a.,Master's Degree,Higher Education
+ma,Master's Degree,Higher Education
+mba,Master's Degree,Higher Education
+post graduate,Master's Degree,Higher Education
+postgraduate,Master's Degree,Higher Education
+doctorate,Doctorate (Ph.D.),Higher Education
+phd,Doctorate (Ph.D.),Higher Education
+ph.d.,Doctorate (Ph.D.),Higher Education
+diploma,Diploma / Vocational,Vocational
+vocational,Diploma / Vocational,Vocational
+illiterate,No Formal Education,Primary
+primary school,Primary School,Primary
+other,Other / Not Specified,Unknown
