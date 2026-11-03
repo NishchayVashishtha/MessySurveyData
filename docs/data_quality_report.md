@@ -1,8 +1,8 @@
 # Data Quality Verification Report
 
 > [!IMPORTANT]
-> **Batch Identifier:** `BATCH_LIVE_001`  
-> **Execution Timestamp:** 2026-11-03 09:13:30 UTC  
+> **Batch Identifier:** `BATCH_BENCH_50K`  
+> **Execution Timestamp:** 2026-11-03 09:19:46 UTC  
 > **Overall Quality Status:** **`PASSED`** (7/7 rules passed)
 
 ## 1. Quality Gate Summary
@@ -23,8 +23,8 @@
 | `NOT_NULL_RECORD_HASH` | `warehouse.fact_responses` (`record_hash`) | `ERROR` | **PASS** | 0 NULL values in 'record_hash' | 0 NULLs | `0` |
 | `UNIQUE_NATURAL_KEY_RESPONDENT_ID` | `warehouse.fact_responses` (`respondent_id`) | `ERROR` | **PASS** | 100% uniqueness on natural key 'respondent_id' | 0 duplicates | `0` |
 | `VALID_RANGE_RATING_1_TO_5` | `warehouse.fact_responses` (`rating_1_to_5`) | `ERROR` | **PASS** | rating_1_to_5 BETWEEN 1 AND 5 | All in range | `0` |
-| `ROW_COUNT_RECONCILIATION` | `audit.row_reconciliation` | `ERROR` | **PASS** | Raw (10,000) == Clean (9,026) + Rejected (474) + Dups (500) | Perfect reconciliation (10,000 rows) | `0` |
-| `MINIMUM_QUALITY_SCORE_SLA` | `warehouse.fact_responses` (`response_quality_score`) | `WARN` | **PASS** | Mean quality score >= 0.50 | Mean quality score: 0.9868 | `0` |
+| `ROW_COUNT_RECONCILIATION` | `audit.row_reconciliation` | `ERROR` | **PASS** | Raw (50,000) == Clean (45,147) + Rejected (2,353) + Dups (2,500) | Perfect reconciliation (50,000 rows) | `0` |
+| `MINIMUM_QUALITY_SCORE_SLA` | `warehouse.fact_responses` (`response_quality_score`) | `WARN` | **PASS** | Mean quality score >= 0.50 | Mean quality score: 0.9869 | `0` |
 
 ## 3. Data Governance & Reconciliation Guarantee
 
