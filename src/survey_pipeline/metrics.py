@@ -1,11 +1,11 @@
 """Pipeline performance and data metrics tracking engine."""
 
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
 import json
-from pathlib import Path
 import time
-from typing import Any, Dict, Optional
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
 
 from survey_pipeline.logging_config import get_logger
 
@@ -21,7 +21,7 @@ class PipelineMetrics:
     source_file: str
     status: str = "STARTED"
     start_time: float = field(default_factory=time.time)
-    end_time: Optional[float] = None
+    end_time: float | None = None
     execution_time_seconds: float = 0.0
 
     # Data volume metrics
@@ -37,9 +37,9 @@ class PipelineMetrics:
     null_pct_after: float = 0.0
     total_quality_checks: int = 0
     passed_quality_checks: int = 0
-    error_message: Optional[str] = None
+    error_message: str | None = None
 
-    def complete(self, status: str = "COMPLETED", error_message: Optional[str] = None) -> None:
+    def complete(self, status: str = "COMPLETED", error_message: str | None = None) -> None:
         """Marks the execution as finished and computes final runtime."""
         self.end_time = time.time()
         self.execution_time_seconds = round(self.end_time - self.start_time, 3)
@@ -56,7 +56,7 @@ class PipelineMetrics:
     def null_reduction_pct(self) -> float:
         return round(self.null_pct_before - self.null_pct_after, 2)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Converts metrics to a serializable dictionary for audit tables."""
         return {
             "batch_id": self.batch_id,
@@ -73,8 +73,10 @@ class PipelineMetrics:
             "null_pct_after": self.null_pct_after,
             "execution_time_seconds": self.execution_time_seconds,
             "error_message": self.error_message,
-            "started_at": datetime.fromtimestamp(self.start_time, tz=timezone.utc).isoformat(),
-            "completed_at": datetime.fromtimestamp(self.end_time, tz=timezone.utc).isoformat() if self.end_time else None,
+            "started_at": datetime.fromtimestamp(self.start_time, tz=UTC).isoformat(),
+            "completed_at": (
+                datetime.fromtimestamp(self.end_time, tz=UTC).isoformat() if self.end_time else None
+            ),
         }
 
     def save_json(self, output_path: Path) -> None:

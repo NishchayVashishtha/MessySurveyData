@@ -1,22 +1,36 @@
 """Data cleaning, normalization, outlier detection, and feature derivation."""
 
-from dataclasses import dataclass
 import re
 import unicodedata
-from typing import Any, Dict, List, Optional, Tuple
+from dataclasses import dataclass
+from typing import Any
+
 import numpy as np
 import pandas as pd
 
 from survey_pipeline.logging_config import get_logger
 from survey_pipeline.profile import profile_dataframe
-from survey_pipeline.standardize import default_standardizer, Standardizer
+from survey_pipeline.standardize import Standardizer, default_standardizer
 
 logger = get_logger(__name__)
 
 # Standard set of missing value representations across survey instruments
 DEFAULT_MISSING_TOKENS = {
-    "n/a", "na", "-", "--", "none", "", "nan", "null", "not available",
-    "undefined", "n.a.", "nil", "blank", "unspecified", "not specified"
+    "n/a",
+    "na",
+    "-",
+    "--",
+    "none",
+    "",
+    "nan",
+    "null",
+    "not available",
+    "undefined",
+    "n.a.",
+    "nil",
+    "blank",
+    "unspecified",
+    "not specified",
 }
 
 # Known mojibake character mappings for UTF-8 misinterpretations
@@ -39,11 +53,11 @@ class CleanResult:
     """Encapsulates the complete result of cleaning and transformation."""
 
     cleaned_df: pd.DataFrame
-    rejected_records: List[Dict[str, Any]]
-    choices_records: List[Dict[str, Any]]
+    rejected_records: list[dict[str, Any]]
+    choices_records: list[dict[str, Any]]
     duplicates_removed: int
-    before_profile: Dict[str, Any]
-    after_profile: Dict[str, Any]
+    before_profile: dict[str, Any]
+    after_profile: dict[str, Any]
 
 
 def normalize_column_name(col: str) -> str:
@@ -61,7 +75,7 @@ def normalize_column_names(df: pd.DataFrame) -> pd.DataFrame:
     return df_out
 
 
-def repair_mojibake_and_unicode(text_val: Optional[str]) -> Optional[str]:
+def repair_mojibake_and_unicode(text_val: str | None) -> str | None:
     """Normalizes Unicode (NFKC), repairs common mojibake sequences, and strips whitespace."""
     if text_val is None or pd.isna(text_val):
         return None
@@ -77,7 +91,7 @@ def repair_mojibake_and_unicode(text_val: Optional[str]) -> Optional[str]:
     return s if s else None
 
 
-def unify_missing_values(df: pd.DataFrame, missing_tokens: Optional[set] = None) -> pd.DataFrame:
+def unify_missing_values(df: pd.DataFrame, missing_tokens: set | None = None) -> pd.DataFrame:
     """Replaces all ambiguous string missing tokens with np.nan."""
     tokens = missing_tokens or DEFAULT_MISSING_TOKENS
     df_out = df.copy()
@@ -92,7 +106,7 @@ def unify_missing_values(df: pd.DataFrame, missing_tokens: Optional[set] = None)
     return df_out
 
 
-def parse_numeric_safe(val: Any) -> Optional[float]:
+def parse_numeric_safe(val: Any) -> float | None:
     """Safely parses raw text with currency symbols, commas, or spaces into float."""
     if val is None or pd.isna(val):
         return None
@@ -109,7 +123,7 @@ def parse_numeric_safe(val: Any) -> Optional[float]:
         return None
 
 
-def parse_date_safe(val: Any) -> Optional[str]:
+def parse_date_safe(val: Any) -> str | None:
     """Parses diverse date formats safely into standard ISO format (YYYY-MM-DD).
 
     Supports:
@@ -180,7 +194,7 @@ def detect_outliers_iqr(series: pd.Series, factor: float = 1.5) -> pd.Series:
 def deduplicate_records(
     df: pd.DataFrame,
     key_column: str = "respondent_id",
-) -> Tuple[pd.DataFrame, int]:
+) -> tuple[pd.DataFrame, int]:
     """Drops duplicate records on the natural key, keeping first occurrence.
 
     Returns:
@@ -196,7 +210,7 @@ def deduplicate_records(
     return df_dedup, dropped_count
 
 
-def derive_age_group(age: Optional[float]) -> str:
+def derive_age_group(age: float | None) -> str:
     """Categorizes numerical age into demographic age brackets."""
     if age is None or pd.isna(age):
         return "Unknown"
@@ -215,7 +229,7 @@ def derive_age_group(age: Optional[float]) -> str:
         return "65+"
 
 
-def derive_income_bracket(income: Optional[float]) -> str:
+def derive_income_bracket(income: float | None) -> str:
     """Categorizes monthly income (INR) into standardized income tiers."""
     if income is None or pd.isna(income):
         return "Not Specified"
@@ -232,9 +246,11 @@ def derive_income_bracket(income: Optional[float]) -> str:
         return "₹200k+"
 
 
-def compute_response_quality_score(row: pd.Series, check_cols: List[str]) -> float:
+def compute_response_quality_score(row: pd.Series, check_cols: list[str]) -> float:
     """Calculates completeness ratio (non-null answers over evaluated questions)."""
-    valid_count = sum(1 for c in check_cols if pd.notna(row.get(c)) and str(row.get(c)).strip() != "")
+    valid_count = sum(
+        1 for c in check_cols if pd.notna(row.get(c)) and str(row.get(c)).strip() != ""
+    )
     return round(valid_count / len(check_cols), 4) if check_cols else 1.0
 
 
@@ -243,7 +259,7 @@ def explode_multiselect_choices(
     col_name: str = "multi_select_choices",
     category: str = "issue_or_skill",
     batch_id: str = "auto",
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Explodes semicolon-separated multi-select fields into bridge records."""
     choices_records = []
     if col_name not in df.columns:
@@ -258,11 +274,13 @@ def explode_multiselect_choices(
 
         parts = [p.strip() for p in str(val).split(";") if p.strip()]
         for choice in set(parts):  # deduplicate within individual respondent
-            choices_records.append({
-                "natural_response_id": natural_response_id,
-                "choice_category": category,
-                "choice_value": choice,
-            })
+            choices_records.append(
+                {
+                    "natural_response_id": natural_response_id,
+                    "choice_category": category,
+                    "choice_value": choice,
+                }
+            )
 
     return choices_records
 
@@ -271,7 +289,7 @@ def clean_survey_dataset(
     df_raw: pd.DataFrame,
     batch_id: str,
     source_file: str,
-    standardizer: Optional[Standardizer] = None,
+    standardizer: Standardizer | None = None,
 ) -> CleanResult:
     """Master cleaning pipeline. Executes all composable cleaning and validation steps.
 
@@ -368,7 +386,7 @@ def clean_survey_dataset(
         df["is_outlier_age"] = False
 
     # 9. Validation & Rejection Routing
-    rejected_records: List[Dict[str, Any]] = []
+    rejected_records: list[dict[str, Any]] = []
     valid_indices = []
 
     for idx, row in df.iterrows():
@@ -390,20 +408,24 @@ def clean_survey_dataset(
             a = row["age"]
             if a < 10 or a > 120:
                 rule_name = "PLAUSIBLE_AGE_LIMIT"
-                rejection_reason = f"Age {a} is physically implausible for survey respondent (<10 or >120)."
+                rejection_reason = (
+                    f"Age {a} is physically implausible for survey respondent (<10 or >120)."
+                )
                 failed_col = "age"
 
         if rule_name:
-            rejected_records.append({
-                "batch_id": batch_id,
-                "natural_respondent_id": resp_id,
-                "rule_failed": rule_name,
-                "severity": "ERROR",
-                "failed_column": failed_col,
-                "invalid_value": str(row.get(failed_col)),
-                "error_reason": rejection_reason,
-                "raw_payload": row.to_dict(),
-            })
+            rejected_records.append(
+                {
+                    "batch_id": batch_id,
+                    "natural_respondent_id": resp_id,
+                    "rule_failed": rule_name,
+                    "severity": "ERROR",
+                    "failed_column": failed_col,
+                    "invalid_value": str(row.get(failed_col)),
+                    "error_reason": rejection_reason,
+                    "raw_payload": row.to_dict(),
+                }
+            )
         else:
             valid_indices.append(idx)
 
@@ -416,14 +438,28 @@ def clean_survey_dataset(
     )
 
     # 10. Derived Features
-    clean_df["age_group"] = clean_df["age"].apply(derive_age_group) if "age" in clean_df.columns else "Unknown"
+    clean_df["age_group"] = (
+        clean_df["age"].apply(derive_age_group) if "age" in clean_df.columns else "Unknown"
+    )
     clean_df["income_bracket"] = (
         clean_df["monthly_income"].apply(derive_income_bracket)
         if "monthly_income" in clean_df.columns
         else "Not Specified"
     )
 
-    core_cols = [c for c in ["state", "age", "gender", "education", "occupation", "party_preference", "rating_1_to_5"] if c in clean_df.columns]
+    core_cols = [
+        c
+        for c in [
+            "state",
+            "age",
+            "gender",
+            "education",
+            "occupation",
+            "party_preference",
+            "rating_1_to_5",
+        ]
+        if c in clean_df.columns
+    ]
     clean_df["response_quality_score"] = clean_df.apply(
         lambda r: compute_response_quality_score(r, core_cols), axis=1
     )

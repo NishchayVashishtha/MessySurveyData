@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 try:
     from airflow import DAG
     from airflow.operators.bash import BashOperator
-    from airflow.operators.python import PythonOperator
+
     AIRFLOW_AVAILABLE = True
 except ImportError:
     AIRFLOW_AVAILABLE = False

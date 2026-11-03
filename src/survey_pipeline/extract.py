@@ -3,7 +3,7 @@
 import hashlib
 import json
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+
 import pandas as pd
 import requests
 
@@ -13,9 +13,7 @@ from survey_pipeline.logging_config import get_logger
 logger = get_logger(__name__)
 
 # Verified open dataset URLs with open licensing (Attribution / Public Domain)
-PRIMARY_REAL_DATASET_URL = (
-    "https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-05-18/survey.csv"
-)
+PRIMARY_REAL_DATASET_URL = "https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-05-18/survey.csv"
 
 
 def compute_file_sha256(file_path: Path) -> str:
@@ -27,7 +25,7 @@ def compute_file_sha256(file_path: Path) -> str:
     return hasher.hexdigest()
 
 
-def compute_record_hash(row_dict: Dict) -> str:
+def compute_record_hash(row_dict: dict) -> str:
     """Computes a deterministic SHA-256 fingerprint of a single raw record.
 
     Used as natural key in MongoDB landing zone to guarantee idempotent ingestion.
@@ -80,9 +78,9 @@ def download_dataset(
 
 def extract_survey_data(
     source: str = "synthetic",
-    custom_file: Optional[Path] = None,
+    custom_file: Path | None = None,
     force_download: bool = False,
-) -> Tuple[pd.DataFrame, str, str]:
+) -> tuple[pd.DataFrame, str, str]:
     """Main extraction entrypoint. Loads survey data and attaches record hashes.
 
     Args:
@@ -103,6 +101,7 @@ def extract_survey_data(
         if not file_path.exists():
             logger.info("Sample synthetic dataset not found. Generating fresh copy...")
             from scripts.generate_dirty_survey import generate_dirty_survey
+
             df_gen = generate_dirty_survey(num_rows=10000)
             file_path.parent.mkdir(parents=True, exist_ok=True)
             df_gen.to_csv(file_path, index=False, encoding="utf-8")
@@ -124,7 +123,9 @@ def extract_survey_data(
             file_path = settings.raw_data_dir / "tidytuesday_survey_raw.csv"
             download_dataset(PRIMARY_REAL_DATASET_URL, file_path, force=force_download)
     else:
-        raise ValueError(f"Unsupported survey data source: '{source}'. Choose 'synthetic' or 'real'.")
+        raise ValueError(
+            f"Unsupported survey data source: '{source}'. Choose 'synthetic' or 'real'."
+        )
 
     file_checksum = compute_file_sha256(file_path)
     logger.info("Reading CSV from %s (Checksum: %s...)", file_path.name, file_checksum[:12])

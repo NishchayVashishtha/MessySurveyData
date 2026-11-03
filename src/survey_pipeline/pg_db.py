@@ -1,9 +1,10 @@
 """PostgreSQL warehouse client and idempotent upsert helpers."""
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 import pandas as pd
-from sqlalchemy import create_engine, Engine, text
+from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.pool import QueuePool
 
 from survey_pipeline.config import settings
@@ -12,7 +13,7 @@ from survey_pipeline.logging_config import get_logger
 logger = get_logger(__name__)
 
 
-def get_pg_engine(url: Optional[str] = None) -> Engine:
+def get_pg_engine(url: str | None = None) -> Engine:
     """Creates an enterprise-grade SQLAlchemy Engine with connection pooling and health checks.
 
     Args:
@@ -22,7 +23,9 @@ def get_pg_engine(url: Optional[str] = None) -> Engine:
         SQLAlchemy Engine instance.
     """
     connection_url = url or settings.postgres.url
-    logger.debug("Connecting to PostgreSQL at %s:%s", settings.postgres.host, settings.postgres.port)
+    logger.debug(
+        "Connecting to PostgreSQL at %s:%s", settings.postgres.host, settings.postgres.port
+    )
 
     engine = create_engine(
         connection_url,
@@ -36,7 +39,7 @@ def get_pg_engine(url: Optional[str] = None) -> Engine:
     return engine
 
 
-def init_database_schema(engine: Engine, sql_dir: Optional[Path] = None) -> None:
+def init_database_schema(engine: Engine, sql_dir: Path | None = None) -> None:
     """Executes the DDL schema scripts in sequential order.
 
     Idempotent operation: creates schemas, tables, constraints, indexes, and views if not exists.
@@ -64,14 +67,14 @@ def init_database_schema(engine: Engine, sql_dir: Optional[Path] = None) -> None
     logger.info("Database schemas and views successfully initialized.")
 
 
-def upsert_dim_geography(df: pd.DataFrame, engine: Engine) -> Dict[str, int]:
+def upsert_dim_geography(df: pd.DataFrame, engine: Engine) -> dict[str, int]:
     """Idempotently populates warehouse.dim_geography and returns {state_name: geography_key}."""
     logger.debug("Upserting geography dimension...")
     insert_sql = text("""
         INSERT INTO warehouse.dim_geography (state_name, state_code, region, zone)
         VALUES (:state_name, :state_code, :region, :zone)
-        ON CONFLICT (state_name) 
-        DO UPDATE SET 
+        ON CONFLICT (state_name)
+        DO UPDATE SET
             region = EXCLUDED.region,
             zone = EXCLUDED.zone;
     """)
@@ -80,7 +83,12 @@ def upsert_dim_geography(df: pd.DataFrame, engine: Engine) -> Dict[str, int]:
     with engine.begin() as conn:
         conn.execute(
             insert_sql,
-            {"state_name": "Unknown / Not Provided", "state_code": "UNK", "region": "Unknown", "zone": "Unknown"}
+            {
+                "state_name": "Unknown / Not Provided",
+                "state_code": "UNK",
+                "region": "Unknown",
+                "zone": "Unknown",
+            },
         )
 
         # Extract unique state records
@@ -103,7 +111,7 @@ def upsert_dim_geography(df: pd.DataFrame, engine: Engine) -> Dict[str, int]:
     return mapping
 
 
-def upsert_dim_occupation(df: pd.DataFrame, engine: Engine) -> Dict[str, int]:
+def upsert_dim_occupation(df: pd.DataFrame, engine: Engine) -> dict[str, int]:
     """Idempotently populates warehouse.dim_occupation and returns {occupation_title: occupation_key}."""
     logger.debug("Upserting occupation dimension...")
     insert_sql = text("""
@@ -114,7 +122,10 @@ def upsert_dim_occupation(df: pd.DataFrame, engine: Engine) -> Dict[str, int]:
     """)
 
     with engine.begin() as conn:
-        conn.execute(insert_sql, {"occupation_title": "Unknown / Not Provided", "occupation_category": "Unknown"})
+        conn.execute(
+            insert_sql,
+            {"occupation_title": "Unknown / Not Provided", "occupation_category": "Unknown"},
+        )
 
         occ_df = df[["occupation"]].dropna().drop_duplicates()
         for _, row in occ_df.iterrows():
@@ -124,13 +135,15 @@ def upsert_dim_occupation(df: pd.DataFrame, engine: Engine) -> Dict[str, int]:
                 {"occupation_title": title, "occupation_category": "General"},
             )
 
-        res = conn.execute(text("SELECT occupation_title, occupation_key FROM warehouse.dim_occupation;"))
+        res = conn.execute(
+            text("SELECT occupation_title, occupation_key FROM warehouse.dim_occupation;")
+        )
         mapping = {row[0]: row[1] for row in res.fetchall()}
 
     return mapping
 
 
-def upsert_dim_education(df: pd.DataFrame, engine: Engine) -> Dict[str, int]:
+def upsert_dim_education(df: pd.DataFrame, engine: Engine) -> dict[str, int]:
     """Idempotently populates warehouse.dim_education and returns {education_level: education_key}."""
     logger.debug("Upserting education dimension...")
     insert_sql = text("""
@@ -141,24 +154,32 @@ def upsert_dim_education(df: pd.DataFrame, engine: Engine) -> Dict[str, int]:
     """)
 
     with engine.begin() as conn:
-        conn.execute(insert_sql, {"education_level": "Unknown / Not Provided", "education_tier": "Unknown"})
+        conn.execute(
+            insert_sql, {"education_level": "Unknown / Not Provided", "education_tier": "Unknown"}
+        )
 
         edu_df = df[["education"]].dropna().drop_duplicates()
         for _, row in edu_df.iterrows():
             level = str(row["education"]).strip()
-            tier = "Higher Education" if any(w in level.lower() for w in ["bachelor", "master", "phd", "doctorate"]) else "Secondary"
+            tier = (
+                "Higher Education"
+                if any(w in level.lower() for w in ["bachelor", "master", "phd", "doctorate"])
+                else "Secondary"
+            )
             conn.execute(
                 insert_sql,
                 {"education_level": level, "education_tier": tier},
             )
 
-        res = conn.execute(text("SELECT education_level, education_key FROM warehouse.dim_education;"))
+        res = conn.execute(
+            text("SELECT education_level, education_key FROM warehouse.dim_education;")
+        )
         mapping = {row[0]: row[1] for row in res.fetchall()}
 
     return mapping
 
 
-def upsert_dim_respondent(df: pd.DataFrame, engine: Engine, batch_id: str) -> Dict[str, int]:
+def upsert_dim_respondent(df: pd.DataFrame, engine: Engine, batch_id: str) -> dict[str, int]:
     """Idempotently upserts warehouse.dim_respondent by natural respondent_id."""
     logger.debug("Upserting respondent dimension...")
     insert_sql = text("""
@@ -176,7 +197,9 @@ def upsert_dim_respondent(df: pd.DataFrame, engine: Engine, batch_id: str) -> Di
             updated_at = CURRENT_TIMESTAMP;
     """)
 
-    resp_df = df[["respondent_id", "gender", "age", "age_group", "district"]].drop_duplicates(subset=["respondent_id"])
+    resp_df = df[["respondent_id", "gender", "age", "age_group", "district"]].drop_duplicates(
+        subset=["respondent_id"]
+    )
     with engine.begin() as conn:
         for _, row in resp_df.iterrows():
             conn.execute(
@@ -191,7 +214,9 @@ def upsert_dim_respondent(df: pd.DataFrame, engine: Engine, batch_id: str) -> Di
                 },
             )
 
-        res = conn.execute(text("SELECT natural_respondent_id, respondent_key FROM warehouse.dim_respondent;"))
+        res = conn.execute(
+            text("SELECT natural_respondent_id, respondent_key FROM warehouse.dim_respondent;")
+        )
         mapping = {row[0]: row[1] for row in res.fetchall()}
 
     return mapping
@@ -200,10 +225,10 @@ def upsert_dim_respondent(df: pd.DataFrame, engine: Engine, batch_id: str) -> Di
 def upsert_fact_responses(
     df: pd.DataFrame,
     engine: Engine,
-    geo_map: Dict[str, int],
-    occ_map: Dict[str, int],
-    edu_map: Dict[str, int],
-    resp_map: Dict[str, int],
+    geo_map: dict[str, int],
+    occ_map: dict[str, int],
+    edu_map: dict[str, int],
+    resp_map: dict[str, int],
     batch_id: str,
     source_file: str,
 ) -> int:
@@ -214,9 +239,15 @@ def upsert_fact_responses(
     """
     logger.info("Upserting %d fact responses into warehouse.fact_responses...", len(df))
 
-    default_geo_key = geo_map.get("Unknown / Not Provided", next(iter(geo_map.values())) if geo_map else 1)
-    default_occ_key = occ_map.get("Unknown / Not Provided", next(iter(occ_map.values())) if occ_map else 1)
-    default_edu_key = edu_map.get("Unknown / Not Provided", next(iter(edu_map.values())) if edu_map else 1)
+    default_geo_key = geo_map.get(
+        "Unknown / Not Provided", next(iter(geo_map.values())) if geo_map else 1
+    )
+    default_occ_key = occ_map.get(
+        "Unknown / Not Provided", next(iter(occ_map.values())) if occ_map else 1
+    )
+    default_edu_key = edu_map.get(
+        "Unknown / Not Provided", next(iter(edu_map.values())) if edu_map else 1
+    )
     default_resp_key = next(iter(resp_map.values())) if resp_map else 1
 
     upsert_sql = text("""
@@ -257,25 +288,41 @@ def upsert_fact_responses(
         occ = str(row["occupation"]) if pd.notna(row.get("occupation")) else ""
         edu = str(row["education"]) if pd.notna(row.get("education")) else ""
 
-        records_to_insert.append({
-            "natural_response_id": f"{resp_id}_{batch_id}",
-            "respondent_key": resp_map.get(resp_id, default_resp_key),
-            "geography_key": geo_map.get(state, default_geo_key),
-            "occupation_key": occ_map.get(occ, default_occ_key),
-            "education_key": edu_map.get(edu, default_edu_key),
-            "batch_id": batch_id,
-            "source_file": source_file,
-            "response_date": row["response_date"] if pd.notna(row.get("response_date")) else "2024-01-01",
-            "party_preference": str(row["party_preference"]) if pd.notna(row.get("party_preference")) else None,
-            "monthly_income": float(row["monthly_income"]) if pd.notna(row.get("monthly_income")) else None,
-            "income_bracket": str(row["income_bracket"]) if pd.notna(row.get("income_bracket")) else None,
-            "rating_1_to_5": int(row["rating_1_to_5"]) if pd.notna(row.get("rating_1_to_5")) else None,
-            "response_quality_score": float(row.get("response_quality_score", 1.0)),
-            "is_outlier_income": bool(row.get("is_outlier_income", False)),
-            "is_outlier_age": bool(row.get("is_outlier_age", False)),
-            "free_text_comment": str(row["free_text_comment"]) if pd.notna(row.get("free_text_comment")) else None,
-            "raw_record_hash": str(row["record_hash"]),
-        })
+        records_to_insert.append(
+            {
+                "natural_response_id": f"{resp_id}_{batch_id}",
+                "respondent_key": resp_map.get(resp_id, default_resp_key),
+                "geography_key": geo_map.get(state, default_geo_key),
+                "occupation_key": occ_map.get(occ, default_occ_key),
+                "education_key": edu_map.get(edu, default_edu_key),
+                "batch_id": batch_id,
+                "source_file": source_file,
+                "response_date": (
+                    row["response_date"] if pd.notna(row.get("response_date")) else "2024-01-01"
+                ),
+                "party_preference": (
+                    str(row["party_preference"]) if pd.notna(row.get("party_preference")) else None
+                ),
+                "monthly_income": (
+                    float(row["monthly_income"]) if pd.notna(row.get("monthly_income")) else None
+                ),
+                "income_bracket": (
+                    str(row["income_bracket"]) if pd.notna(row.get("income_bracket")) else None
+                ),
+                "rating_1_to_5": (
+                    int(row["rating_1_to_5"]) if pd.notna(row.get("rating_1_to_5")) else None
+                ),
+                "response_quality_score": float(row.get("response_quality_score", 1.0)),
+                "is_outlier_income": bool(row.get("is_outlier_income", False)),
+                "is_outlier_age": bool(row.get("is_outlier_age", False)),
+                "free_text_comment": (
+                    str(row["free_text_comment"])
+                    if pd.notna(row.get("free_text_comment"))
+                    else None
+                ),
+                "raw_record_hash": str(row["record_hash"]),
+            }
+        )
 
     # Bulk execute in chunks
     chunk_size = 1000
@@ -289,9 +336,9 @@ def upsert_fact_responses(
 
 
 def upsert_fact_choices(
-    choices: List[Dict[str, Any]],
+    choices: list[dict[str, Any]],
     engine: Engine,
-    batch_id: Optional[str] = None,
+    batch_id: str | None = None,
 ) -> int:
     """Loads exploded multi-select choices into warehouse.fact_response_choices with high throughput."""
     if not choices:
@@ -303,11 +350,15 @@ def upsert_fact_choices(
     with engine.connect() as conn:
         if batch_id:
             res = conn.execute(
-                text("SELECT natural_response_id, response_id FROM warehouse.fact_responses WHERE batch_id = :b;"),
+                text(
+                    "SELECT natural_response_id, response_id FROM warehouse.fact_responses WHERE batch_id = :b;"
+                ),
                 {"b": batch_id},
             )
         else:
-            res = conn.execute(text("SELECT natural_response_id, response_id FROM warehouse.fact_responses;"))
+            res = conn.execute(
+                text("SELECT natural_response_id, response_id FROM warehouse.fact_responses;")
+            )
         id_map = {row[0]: row[1] for row in res.fetchall()}
 
     insert_sql = text("""
@@ -320,11 +371,13 @@ def upsert_fact_choices(
     for c in choices:
         nat_id = c["natural_response_id"]
         if nat_id in id_map:
-            records.append({
-                "response_id": id_map[nat_id],
-                "choice_category": c["choice_category"],
-                "choice_value": c["choice_value"],
-            })
+            records.append(
+                {
+                    "response_id": id_map[nat_id],
+                    "choice_category": c["choice_category"],
+                    "choice_value": c["choice_value"],
+                }
+            )
 
     chunk_size = 5000
     with engine.begin() as conn:
@@ -336,7 +389,7 @@ def upsert_fact_choices(
     return len(records)
 
 
-def record_audit_pipeline_run(engine: Engine, metrics: Dict[str, Any]) -> None:
+def record_audit_pipeline_run(engine: Engine, metrics: dict[str, Any]) -> None:
     """Logs or updates pipeline execution metrics into audit.pipeline_runs."""
     sql = text("""
         INSERT INTO audit.pipeline_runs (
@@ -370,7 +423,7 @@ def record_audit_pipeline_run(engine: Engine, metrics: Dict[str, Any]) -> None:
         conn.execute(sql, metrics)
 
 
-def record_rejected_rows_pg(engine: Engine, rejected_rows: List[Dict[str, Any]]) -> int:
+def record_rejected_rows_pg(engine: Engine, rejected_rows: list[dict[str, Any]]) -> int:
     """Inserts rejected records into audit.rejected_rows."""
     if not rejected_rows:
         return 0
@@ -397,16 +450,18 @@ def record_rejected_rows_pg(engine: Engine, rejected_rows: List[Dict[str, Any]])
         else:
             payload_str = str(payload) if payload else "{}"
 
-        formatted_rows.append({
-            "batch_id": r["batch_id"],
-            "natural_respondent_id": r.get("natural_respondent_id"),
-            "rule_failed": r["rule_failed"],
-            "severity": r.get("severity", "ERROR"),
-            "failed_column": r.get("failed_column"),
-            "invalid_value": str(r.get("invalid_value", "")),
-            "error_reason": r["error_reason"],
-            "raw_payload": payload_str,
-        })
+        formatted_rows.append(
+            {
+                "batch_id": r["batch_id"],
+                "natural_respondent_id": r.get("natural_respondent_id"),
+                "rule_failed": r["rule_failed"],
+                "severity": r.get("severity", "ERROR"),
+                "failed_column": r.get("failed_column"),
+                "invalid_value": str(r.get("invalid_value", "")),
+                "error_reason": r["error_reason"],
+                "raw_payload": payload_str,
+            }
+        )
 
     with engine.begin() as conn:
         conn.execute(sql, formatted_rows)
@@ -414,7 +469,7 @@ def record_rejected_rows_pg(engine: Engine, rejected_rows: List[Dict[str, Any]])
     return len(formatted_rows)
 
 
-def record_data_quality_results_pg(engine: Engine, dq_results: List[Dict[str, Any]]) -> int:
+def record_data_quality_results_pg(engine: Engine, dq_results: list[dict[str, Any]]) -> int:
     """Inserts data quality check results into audit.data_quality_results."""
     if not dq_results:
         return 0

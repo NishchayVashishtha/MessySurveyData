@@ -2,7 +2,7 @@
 
 import logging
 import sys
-from pathlib import Path
+
 from survey_pipeline.config import BASE_DIR, settings
 
 

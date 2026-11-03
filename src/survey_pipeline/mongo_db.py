@@ -9,10 +9,11 @@ or lossy truncation. Every raw submission is captured verbatim with cryptographi
 checksums and batch lineage before any transformation.
 """
 
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
+
 import pymongo
-from pymongo import ASCENDING, IndexModel, ReplaceOne, UpdateOne
+from pymongo import ASCENDING, IndexModel, UpdateOne
 from pymongo.database import Database
 
 from survey_pipeline.config import settings
@@ -21,7 +22,7 @@ from survey_pipeline.logging_config import get_logger
 logger = get_logger(__name__)
 
 
-def get_mongo_client(uri: Optional[str] = None) -> pymongo.MongoClient:
+def get_mongo_client(uri: str | None = None) -> pymongo.MongoClient:
     """Returns a connected pymongo MongoClient with timeout protection.
 
     Args:
@@ -40,10 +41,13 @@ def get_mongo_client(uri: Optional[str] = None) -> pymongo.MongoClient:
     return client
 
 
-def get_database(client: Optional[pymongo.MongoClient] = None, db_name: Optional[str] = None) -> Database:
+def get_database(client: pymongo.MongoClient | None = None, db_name: str | None = None) -> Database:
     """Returns the database handle."""
     cli = client or get_mongo_client()
     return cli[db_name or settings.mongo.db]
+
+
+get_mongo_db = get_database
 
 
 def setup_mongo_indexes(db: Database) -> None:
@@ -58,29 +62,37 @@ def setup_mongo_indexes(db: Database) -> None:
     logger.info("Setting up MongoDB collection indexes...")
 
     # raw_responses: unique on record_hash, index on batch_id, compound on (source_file, ingest_ts)
-    raw_col.create_indexes([
-        IndexModel([("record_hash", ASCENDING)], unique=True, name="uniq_record_hash"),
-        IndexModel([("batch_id", ASCENDING)], name="idx_batch_id"),
-        IndexModel([("source_file", ASCENDING), ("ingest_ts", ASCENDING)], name="idx_source_ingest"),
-    ])
+    raw_col.create_indexes(
+        [
+            IndexModel([("record_hash", ASCENDING)], unique=True, name="uniq_record_hash"),
+            IndexModel([("batch_id", ASCENDING)], name="idx_batch_id"),
+            IndexModel(
+                [("source_file", ASCENDING), ("ingest_ts", ASCENDING)], name="idx_source_ingest"
+            ),
+        ]
+    )
 
     # rejected_responses: index on batch_id, rule_failed
-    rejected_col.create_indexes([
-        IndexModel([("batch_id", ASCENDING)], name="idx_rejected_batch"),
-        IndexModel([("rule_failed", ASCENDING)], name="idx_rejected_rule"),
-    ])
+    rejected_col.create_indexes(
+        [
+            IndexModel([("batch_id", ASCENDING)], name="idx_rejected_batch"),
+            IndexModel([("rule_failed", ASCENDING)], name="idx_rejected_rule"),
+        ]
+    )
 
     # pipeline_runs: unique on batch_id
-    runs_col.create_indexes([
-        IndexModel([("batch_id", ASCENDING)], unique=True, name="uniq_run_batch"),
-    ])
+    runs_col.create_indexes(
+        [
+            IndexModel([("batch_id", ASCENDING)], unique=True, name="uniq_run_batch"),
+        ]
+    )
 
     logger.info("MongoDB indexes successfully verified.")
 
 
 def upsert_raw_responses(
     db: Database,
-    records: List[Dict[str, Any]],
+    records: list[dict[str, Any]],
     batch_id: str,
     source_file: str,
 ) -> int:
@@ -106,8 +118,8 @@ def upsert_raw_responses(
         return 0
 
     collection = db["raw_responses"]
-    now_utc = datetime.now(timezone.utc).isoformat()
-    operations: List[UpdateOne] = []
+    now_utc = datetime.now(UTC).isoformat()
+    operations: list[UpdateOne] = []
 
     for record in records:
         rec_hash = record.get("record_hash")
@@ -136,7 +148,7 @@ def upsert_raw_responses(
     for i in range(0, len(operations), batch_size):
         chunk = operations[i : i + batch_size]
         result = collection.bulk_write(chunk, ordered=False)
-        upserted_count += (result.upserted_count + result.matched_count)
+        upserted_count += result.upserted_count + result.matched_count
 
     logger.info(
         "Ingested %d raw records into MongoDB raw_responses for batch '%s'.",
@@ -148,7 +160,7 @@ def upsert_raw_responses(
 
 def insert_rejected_responses(
     db: Database,
-    rejected_records: List[Dict[str, Any]],
+    rejected_records: list[dict[str, Any]],
 ) -> int:
     """Records validation failures into MongoDB rejected_responses with failure reasons.
 
@@ -163,7 +175,7 @@ def insert_rejected_responses(
         return 0
 
     collection = db["rejected_responses"]
-    now_utc = datetime.now(timezone.utc).isoformat()
+    now_utc = datetime.now(UTC).isoformat()
 
     docs = [{**rec, "recorded_at": now_utc} for rec in rejected_records]
     result = collection.insert_many(docs, ordered=False)
@@ -171,7 +183,7 @@ def insert_rejected_responses(
     return len(result.inserted_ids)
 
 
-def log_pipeline_run_mongo(db: Database, run_doc: Dict[str, Any]) -> None:
+def log_pipeline_run_mongo(db: Database, run_doc: dict[str, Any]) -> None:
     """Records pipeline run metadata and metrics into pipeline_runs collection."""
     collection = db["pipeline_runs"]
     batch_id = run_doc["batch_id"]
@@ -179,7 +191,9 @@ def log_pipeline_run_mongo(db: Database, run_doc: Dict[str, Any]) -> None:
     logger.debug("Logged pipeline run '%s' to MongoDB pipeline_runs.", batch_id)
 
 
-def run_raw_responses_aggregation(db: Database, batch_id: Optional[str] = None) -> List[Dict[str, Any]]:
+def run_raw_responses_aggregation(
+    db: Database, batch_id: str | None = None
+) -> list[dict[str, Any]]:
     """Demonstrates an analytical aggregation pipeline directly on the raw landing zone.
 
     Computes:

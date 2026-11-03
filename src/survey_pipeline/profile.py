@@ -1,10 +1,9 @@
 """Data profiling engine: computes null distributions, cardinality, and before/after comparisons."""
 
-from datetime import datetime, timezone
-import json
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-import numpy as np
+from typing import Any
+
 import pandas as pd
 
 from survey_pipeline.logging_config import get_logger
@@ -13,12 +12,25 @@ logger = get_logger(__name__)
 
 
 RAW_MISSING_TOKENS = {
-    "n/a", "na", "-", "--", "none", "", "nan", "null", "not available",
-    "undefined", "n.a.", "nil", "blank", "unspecified", "not specified"
+    "n/a",
+    "na",
+    "-",
+    "--",
+    "none",
+    "",
+    "nan",
+    "null",
+    "not available",
+    "undefined",
+    "n.a.",
+    "nil",
+    "blank",
+    "unspecified",
+    "not specified",
 }
 
 
-def profile_dataframe(df: pd.DataFrame, stage_name: str = "raw") -> Dict[str, Any]:
+def profile_dataframe(df: pd.DataFrame, stage_name: str = "raw") -> dict[str, Any]:
     """Computes statistical profile of a dataset at any ETL stage.
 
     Metrics captured:
@@ -39,21 +51,26 @@ def profile_dataframe(df: pd.DataFrame, stage_name: str = "raw") -> Dict[str, An
     total_cols = len(df.columns)
     total_cells = total_rows * total_cols if total_rows > 0 else 0
 
-    col_profiles: Dict[str, Dict[str, Any]] = {}
+    col_profiles: dict[str, dict[str, Any]] = {}
     total_nulls = 0
 
     for col in df.columns:
         series = df[col]
         # Count explicit NaNs and ambiguous string missing tokens
         null_mask = series.apply(
-            lambda x: True if pd.isna(x) or (isinstance(x, str) and str(x).strip().lower() in RAW_MISSING_TOKENS) else False
+            lambda x: (
+                True
+                if pd.isna(x)
+                or (isinstance(x, str) and str(x).strip().lower() in RAW_MISSING_TOKENS)
+                else False
+            )
         )
         null_count = int(null_mask.sum())
         total_nulls += null_count
         null_pct = round((null_count / total_rows * 100), 2) if total_rows > 0 else 0.0
         unique_count = int(series[~null_mask].nunique())
 
-        col_meta: Dict[str, Any] = {
+        col_meta: dict[str, Any] = {
             "dtype": str(series.dtype),
             "null_count": null_count,
             "null_pct": null_pct,
@@ -89,7 +106,7 @@ def profile_dataframe(df: pd.DataFrame, stage_name: str = "raw") -> Dict[str, An
 
     profile = {
         "stage": stage_name,
-        "profile_timestamp": datetime.now(timezone.utc).isoformat(),
+        "profile_timestamp": datetime.now(UTC).isoformat(),
         "total_rows": total_rows,
         "total_columns": total_cols,
         "total_cells": total_cells,
@@ -109,9 +126,9 @@ def profile_dataframe(df: pd.DataFrame, stage_name: str = "raw") -> Dict[str, An
 
 
 def generate_profile_comparison_markdown(
-    profile_before: Dict[str, Any],
-    profile_after: Dict[str, Any],
-    output_path: Optional[Path] = None,
+    profile_before: dict[str, Any],
+    profile_after: dict[str, Any],
+    output_path: Path | None = None,
     duplicates_removed: int = 0,
     rejected_count: int = 0,
 ) -> str:
@@ -125,12 +142,12 @@ def generate_profile_comparison_markdown(
     null_pct_after = profile_after["overall_null_pct"]
     null_reduction = round(null_pct_before - null_pct_after, 2)
 
-    lines: List[str] = [
+    lines: list[str] = [
         "# Data Cleaning and Transformation Profile Report",
         "",
         "> [!IMPORTANT]",
-        f"> **Measured Execution Timestamp:** {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}  ",
-        f"> **Pipeline Batch Run:** Automated Profiler Verification",
+        f"> **Measured Execution Timestamp:** {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S UTC')}  ",
+        "> **Pipeline Batch Run:** Automated Profiler Verification",
         "",
         "## 1. Executive Summary: Measured Pipeline Impact",
         "",
@@ -183,13 +200,15 @@ def generate_profile_comparison_markdown(
 
         lines.append(f"| `{col}` | `{b_dtype}` | `{a_dtype}` | `{b_null}` | `{a_null}` | {strat} |")
 
-    lines.extend([
-        "",
-        "## 3. Numeric Distribution and Outlier Bounds",
-        "",
-        "| Numeric Field | Mean | Median | Q25 (p25) | Q75 (p75) | IQR | Outliers Flagged |",
-        "| :--- | :--- | :--- | :--- | :--- | :--- | :--- |",
-    ])
+    lines.extend(
+        [
+            "",
+            "## 3. Numeric Distribution and Outlier Bounds",
+            "",
+            "| Numeric Field | Mean | Median | Q25 (p25) | Q75 (p75) | IQR | Outliers Flagged |",
+            "| :--- | :--- | :--- | :--- | :--- | :--- | :--- |",
+        ]
+    )
 
     for col, a_meta in after_cols.items():
         if "numeric_stats" in a_meta:

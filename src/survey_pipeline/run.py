@@ -1,10 +1,9 @@
 """Command-Line Interface and Pipeline Orchestrator for survey-data-pipeline."""
 
 import argparse
-from datetime import datetime, timezone
-from pathlib import Path
 import sys
-from typing import Optional
+from datetime import UTC, datetime
+from pathlib import Path
 
 from rich.console import Console
 from rich.table import Table
@@ -27,18 +26,18 @@ logger = get_logger(__name__)
 console = Console()
 
 
-def generate_batch_id(custom_batch_id: Optional[str] = None) -> str:
+def generate_batch_id(custom_batch_id: str | None = None) -> str:
     """Generates an ISO timestamped batch identifier or returns custom one."""
     if custom_batch_id and custom_batch_id.lower() != "auto":
         return custom_batch_id
-    now_str = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    now_str = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
     return f"BATCH_{now_str}"
 
 
 def run_pipeline(
     source: str = "synthetic",
-    batch_id: Optional[str] = None,
-    custom_file: Optional[Path] = None,
+    batch_id: str | None = None,
+    custom_file: Path | None = None,
     force_download: bool = False,
     skip_mongo: bool = False,
     skip_pg: bool = False,
@@ -47,7 +46,9 @@ def run_pipeline(
     """Orchestrates end-to-end ELT execution across all pipeline phases."""
     actual_batch_id = generate_batch_id(batch_id)
     logger.info("================================================================================")
-    logger.info("STARTING SURVEY DATA PIPELINE: Batch ID '%s' | Source: '%s'", actual_batch_id, source)
+    logger.info(
+        "STARTING SURVEY DATA PIPELINE: Batch ID '%s' | Source: '%s'", actual_batch_id, source
+    )
     logger.info("================================================================================")
 
     # 1. Initialize Metrics Tracker
@@ -92,7 +93,11 @@ def run_pipeline(
             )
             metrics.records_loaded_mongo = records_loaded_mongo
         else:
-            logger.info("[PHASE 2/5] Skipping MongoDB ingestion (dry_run=%s, skip_mongo=%s)", dry_run, skip_mongo)
+            logger.info(
+                "[PHASE 2/5] Skipping MongoDB ingestion (dry_run=%s, skip_mongo=%s)",
+                dry_run,
+                skip_mongo,
+            )
             metrics.records_loaded_mongo = len(df_raw)
 
         # ----------------------------------------------------------------------
@@ -171,7 +176,9 @@ def run_pipeline(
         # PHASE 5: LOAD TO POSTGRESQL WAREHOUSE
         # ----------------------------------------------------------------------
         if not dry_run and not skip_pg and pg_engine is not None:
-            logger.info("[PHASE 5/5] Idempotently loading dimensional star schema into PostgreSQL...")
+            logger.info(
+                "[PHASE 5/5] Idempotently loading dimensional star schema into PostgreSQL..."
+            )
             facts_loaded = load_clean_to_postgres(
                 engine=pg_engine,
                 clean_result=clean_result,
@@ -180,7 +187,9 @@ def run_pipeline(
             )
             metrics.records_loaded_pg = facts_loaded
         else:
-            logger.info("[PHASE 5/5] Skipping PostgreSQL loading (dry_run=%s, skip_pg=%s)", dry_run, skip_pg)
+            logger.info(
+                "[PHASE 5/5] Skipping PostgreSQL loading (dry_run=%s, skip_pg=%s)", dry_run, skip_pg
+            )
             metrics.records_loaded_pg = len(clean_result.cleaned_df)
 
         # Mark pipeline complete
@@ -230,14 +239,46 @@ def print_pipeline_summary(metrics: PipelineMetrics) -> None:
 
     table.add_row("Execution Status", metrics.status, "Zero-error policy enforced")
     table.add_row("Source Dataset File", metrics.source_file, f"Source: {metrics.source_name}")
-    table.add_row("Total Raw Records Extracted", f"{metrics.records_extracted:,}", "100% captured with SHA-256 hash")
-    table.add_row("Raw Records Loaded to MongoDB", f"{metrics.records_loaded_mongo:,}", "Schema-flexible raw landing lake")
-    table.add_row("Duplicate Records Removed", f"{metrics.duplicates_dropped:,}", "100% duplicate elimination on PK")
-    table.add_row("Invalid Records Rejected", f"{metrics.records_rejected:,}", "Logged to rejection lake with reasons")
-    table.add_row("Clean Facts Loaded to PostgreSQL", f"{metrics.records_loaded_pg:,}", "Star schema with surrogate FKs")
-    table.add_row("Missing Value % (Raw -> Clean)", f"{metrics.null_pct_before:.2f}% -> {metrics.null_pct_after:.2f}%", f"{metrics.null_reduction_pct:+.2f}% net null reduction")
-    table.add_row("Data Quality Checks Passed", f"{metrics.passed_quality_checks} / {metrics.total_quality_checks}", "100% critical rules passed")
-    table.add_row("Total End-to-End Runtime", f"{metrics.execution_time_seconds:.3f} seconds", f"{metrics.records_extracted / max(metrics.execution_time_seconds, 0.001):,.0f} rows / sec throughput")
+    table.add_row(
+        "Total Raw Records Extracted",
+        f"{metrics.records_extracted:,}",
+        "100% captured with SHA-256 hash",
+    )
+    table.add_row(
+        "Raw Records Loaded to MongoDB",
+        f"{metrics.records_loaded_mongo:,}",
+        "Schema-flexible raw landing lake",
+    )
+    table.add_row(
+        "Duplicate Records Removed",
+        f"{metrics.duplicates_dropped:,}",
+        "100% duplicate elimination on PK",
+    )
+    table.add_row(
+        "Invalid Records Rejected",
+        f"{metrics.records_rejected:,}",
+        "Logged to rejection lake with reasons",
+    )
+    table.add_row(
+        "Clean Facts Loaded to PostgreSQL",
+        f"{metrics.records_loaded_pg:,}",
+        "Star schema with surrogate FKs",
+    )
+    table.add_row(
+        "Missing Value % (Raw -> Clean)",
+        f"{metrics.null_pct_before:.2f}% -> {metrics.null_pct_after:.2f}%",
+        f"{metrics.null_reduction_pct:+.2f}% net null reduction",
+    )
+    table.add_row(
+        "Data Quality Checks Passed",
+        f"{metrics.passed_quality_checks} / {metrics.total_quality_checks}",
+        "100% critical rules passed",
+    )
+    table.add_row(
+        "Total End-to-End Runtime",
+        f"{metrics.execution_time_seconds:.3f} seconds",
+        f"{metrics.records_extracted / max(metrics.execution_time_seconds, 0.001):,.0f} rows / sec throughput",
+    )
 
     console.print()
     console.print(table)

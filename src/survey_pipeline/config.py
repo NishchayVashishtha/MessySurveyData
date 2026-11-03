@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-from typing import Optional
+
 from dotenv import load_dotenv
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -20,8 +20,8 @@ class MongoSettings(BaseSettings):
 
     host: str = Field(default="localhost")
     port: int = Field(default=27017)
-    user: Optional[str] = Field(default="survey_admin")
-    password: Optional[str] = Field(default="survey_secret_pass")
+    user: str | None = Field(default="survey_admin")
+    password: str | None = Field(default="survey_secret_pass")
     db: str = Field(default="survey_raw_lake")
     auth_source: str = Field(default="admin")
 

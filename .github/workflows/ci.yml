@@ -1,0 +1,80 @@
+name: Survey Data Pipeline CI
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  test-and-lint:
+    name: Lint, Test & Coverage Audit
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: survey_dw
+          POSTGRES_USER: survey_admin
+          POSTGRES_PASSWORD: survey_secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      mongodb:
+        image: mongo:7.0
+        env:
+          MONGO_INITDB_ROOT_USERNAME: survey_admin
+          MONGO_INITDB_ROOT_PASSWORD: survey_secret
+          MONGO_INITDB_DATABASE: survey_lake
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Code Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+          pip install -e .
+
+      - name: Run Ruff Linter
+        run: |
+          ruff check .
+
+      - name: Run Black Code Formatter Verification
+        run: |
+          black --check .
+
+      - name: Execute Pytest Suite with Coverage Audit
+        env:
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: survey_dw
+          POSTGRES_USER: survey_admin
+          POSTGRES_PASSWORD: survey_secret
+          MONGO_HOST: localhost
+          MONGO_PORT: 27017
+          MONGO_USER: survey_admin
+          MONGO_PASSWORD: survey_secret
+          MONGO_DB: survey_lake
+        run: |
+          pytest -v --cov=survey_pipeline --cov-report=term-missing --cov-report=xml --cov-fail-under=70 tests/

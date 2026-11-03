@@ -1,6 +1,7 @@
 """Warehouse loading coordinator: manages dual-store ingestion into MongoDB and PostgreSQL."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 import pandas as pd
 from pymongo.database import Database
 from sqlalchemy import Engine
@@ -93,10 +94,10 @@ def load_clean_to_postgres(
 
 def finalize_audit_records(
     metrics: PipelineMetrics,
-    dq_results: List[CheckResult],
-    rejected_records: List[Dict[str, Any]],
-    mongo_db: Optional[Database] = None,
-    pg_engine: Optional[Engine] = None,
+    dq_results: list[CheckResult],
+    rejected_records: list[dict[str, Any]],
+    mongo_db: Database | None = None,
+    pg_engine: Engine | None = None,
 ) -> None:
     """Records audit logs, run metrics, and DQ check evaluations across both stores."""
     metrics_dict = metrics.to_dict()

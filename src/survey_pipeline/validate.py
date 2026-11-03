@@ -12,10 +12,10 @@ Features:
 """
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
-import numpy as np
+from typing import Any
+
 import pandas as pd
 
 from survey_pipeline.logging_config import get_logger
@@ -25,6 +25,7 @@ logger = get_logger(__name__)
 
 class DataQualityError(Exception):
     """Raised when one or more ERROR-severity data quality checks fail."""
+
     pass
 
 
@@ -34,15 +35,15 @@ class CheckResult:
 
     check_name: str
     target_table: str
-    target_column: Optional[str]
+    target_column: str | None
     severity: str  # 'ERROR', 'WARN', 'INFO'
     passed: bool
     expected_condition: str
     actual_value: str
     failed_records_count: int = 0
-    checked_at: str = datetime.now(timezone.utc).isoformat()
+    checked_at: str = datetime.now(UTC).isoformat()
 
-    def to_dict(self, batch_id: str = "auto") -> Dict[str, Any]:
+    def to_dict(self, batch_id: str = "auto") -> dict[str, Any]:
         return {
             "batch_id": batch_id,
             "check_name": self.check_name,
@@ -61,9 +62,11 @@ class DataQualitySuite:
 
     def __init__(self, batch_id: str = "auto"):
         self.batch_id = batch_id
-        self.results: List[CheckResult] = []
+        self.results: list[CheckResult] = []
 
-    def check_schema_presence(self, df: pd.DataFrame, required_columns: List[str], table: str = "warehouse.fact_responses") -> CheckResult:
+    def check_schema_presence(
+        self, df: pd.DataFrame, required_columns: list[str], table: str = "warehouse.fact_responses"
+    ) -> CheckResult:
         """Verifies that mandatory schema columns are present in the dataset."""
         missing = [c for c in required_columns if c not in df.columns]
         passed = len(missing) == 0
@@ -80,7 +83,13 @@ class DataQualitySuite:
         self.results.append(res)
         return res
 
-    def check_not_null(self, df: pd.DataFrame, column: str, table: str = "warehouse.fact_responses", severity: str = "ERROR") -> CheckResult:
+    def check_not_null(
+        self,
+        df: pd.DataFrame,
+        column: str,
+        table: str = "warehouse.fact_responses",
+        severity: str = "ERROR",
+    ) -> CheckResult:
         """Asserts that a critical column contains zero NULL or NaN values."""
         if column not in df.columns:
             res = CheckResult(
@@ -105,13 +114,23 @@ class DataQualitySuite:
             severity=severity,
             passed=passed,
             expected_condition=f"0 NULL values in '{column}'",
-            actual_value=f"{null_count:,} NULL values detected ({null_count/len(df)*100:.2f}%)" if null_count else "0 NULLs",
+            actual_value=(
+                f"{null_count:,} NULL values detected ({null_count/len(df)*100:.2f}%)"
+                if null_count
+                else "0 NULLs"
+            ),
             failed_records_count=null_count,
         )
         self.results.append(res)
         return res
 
-    def check_uniqueness(self, df: pd.DataFrame, column: str, table: str = "warehouse.fact_responses", severity: str = "ERROR") -> CheckResult:
+    def check_uniqueness(
+        self,
+        df: pd.DataFrame,
+        column: str,
+        table: str = "warehouse.fact_responses",
+        severity: str = "ERROR",
+    ) -> CheckResult:
         """Asserts that the natural key contains no duplicates."""
         if column not in df.columns:
             passed = False
@@ -171,7 +190,11 @@ class DataQualitySuite:
             severity=severity,
             passed=passed,
             expected_condition=f"{column} BETWEEN {min_val} AND {max_val}",
-            actual_value=f"{viol_count:,} records out of range (min: {valid_vals.min()}, max: {valid_vals.max()})" if viol_count else "All in range",
+            actual_value=(
+                f"{viol_count:,} records out of range (min: {valid_vals.min()}, max: {valid_vals.max()})"
+                if viol_count
+                else "All in range"
+            ),
             failed_records_count=viol_count,
         )
         self.results.append(res)
@@ -211,7 +234,11 @@ class DataQualitySuite:
             severity=severity,
             passed=passed,
             expected_condition=f"Values conform to {len(accepted_set)} canonical domains",
-            actual_value=f"{unmapped_count:,} unrecognized categorical values" if unmapped_count else "100% matched",
+            actual_value=(
+                f"{unmapped_count:,} unrecognized categorical values"
+                if unmapped_count
+                else "100% matched"
+            ),
             failed_records_count=unmapped_count,
         )
         self.results.append(res)
@@ -239,7 +266,11 @@ class DataQualitySuite:
             severity="ERROR",
             passed=passed,
             expected_condition=f"Raw ({raw_count:,}) == Clean ({clean_count:,}) + Rejected ({rejected_count:,}) + Dups ({duplicates_dropped:,})",
-            actual_value=f"Reconciled {reconciled_sum:,} rows (discrepancy: {discrepancy:,})" if not passed else f"Perfect reconciliation ({raw_count:,} rows)",
+            actual_value=(
+                f"Reconciled {reconciled_sum:,} rows (discrepancy: {discrepancy:,})"
+                if not passed
+                else f"Perfect reconciliation ({raw_count:,} rows)"
+            ),
             failed_records_count=abs(discrepancy),
         )
         self.results.append(res)
@@ -278,20 +309,26 @@ class DataQualitySuite:
         errors = [r for r in self.results if not r.passed and r.severity == "ERROR"]
         if errors:
             err_details = "; ".join(f"{e.check_name}: {e.actual_value}" for e in errors)
-            logger.error("Data Quality Suite FAILED with %d critical errors: %s", len(errors), err_details)
-            raise DataQualityError(f"Pipeline stopped due to data quality violations: {err_details}")
-        logger.info("Data Quality Suite passed: 0 critical errors, %d checks executed.", len(self.results))
+            logger.error(
+                "Data Quality Suite FAILED with %d critical errors: %s", len(errors), err_details
+            )
+            raise DataQualityError(
+                f"Pipeline stopped due to data quality violations: {err_details}"
+            )
+        logger.info(
+            "Data Quality Suite passed: 0 critical errors, %d checks executed.", len(self.results)
+        )
 
 
 def generate_data_quality_report_markdown(
-    results: List[CheckResult],
+    results: list[CheckResult],
     batch_id: str,
-    output_path: Optional[Path] = None,
+    output_path: Path | None = None,
 ) -> str:
     """Generates docs/data_quality_report.md containing all measured check outcomes."""
     total_checks = len(results)
     passed_checks = sum(1 for r in results if r.passed)
-    failed_checks = total_checks - passed_checks
+    total_checks - passed_checks
     errors = sum(1 for r in results if not r.passed and r.severity == "ERROR")
     warnings = sum(1 for r in results if not r.passed and r.severity == "WARN")
 
@@ -302,7 +339,7 @@ def generate_data_quality_report_markdown(
         "",
         "> [!IMPORTANT]",
         f"> **Batch Identifier:** `{batch_id}`  ",
-        f"> **Execution Timestamp:** {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}  ",
+        f"> **Execution Timestamp:** {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S UTC')}  ",
         f"> **Overall Quality Status:** **`{overall_status}`** ({passed_checks}/{total_checks} rules passed)",
         "",
         "## 1. Quality Gate Summary",
@@ -327,14 +364,16 @@ def generate_data_quality_report_markdown(
             f"| `{r.check_name}` | {target} | `{r.severity}` | **{status_badge}** | {r.expected_condition} | {r.actual_value} | `{r.failed_records_count:,}` |"
         )
 
-    lines.extend([
-        "",
-        "## 3. Data Governance & Reconciliation Guarantee",
-        "",
-        "- **Idempotency Guarantee:** Every record undergoes deterministic SHA-256 natural key hashing. Re-running identical batches replaces existing staging/warehouse rows without inflating counts.",
-        "- **Reconciliation Equation:** Verified that `Raw Intake = Clean Loaded + Rejected Invalid + Dropped Duplicates` exactly.",
-        "- **Audit Trail:** Every rule evaluation recorded permanently in PostgreSQL `audit.data_quality_results`.",
-    ])
+    lines.extend(
+        [
+            "",
+            "## 3. Data Governance & Reconciliation Guarantee",
+            "",
+            "- **Idempotency Guarantee:** Every record undergoes deterministic SHA-256 natural key hashing. Re-running identical batches replaces existing staging/warehouse rows without inflating counts.",
+            "- **Reconciliation Equation:** Verified that `Raw Intake = Clean Loaded + Rejected Invalid + Dropped Duplicates` exactly.",
+            "- **Audit Trail:** Every rule evaluation recorded permanently in PostgreSQL `audit.data_quality_results`.",
+        ]
+    )
 
     report = "\n".join(lines) + "\n"
 

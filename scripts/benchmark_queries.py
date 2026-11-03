@@ -6,11 +6,12 @@ captures measured execution plans, buffer reads, and speedup ratios,
 and exports an auditable Markdown benchmark report into docs/query_optimization.md.
 """
 
-from datetime import datetime, timezone
-from pathlib import Path
 import re
-from typing import Any, Dict, List, Tuple
+from datetime import UTC, datetime
+from pathlib import Path
+
 from sqlalchemy import text
+
 from survey_pipeline.pg_db import get_pg_engine
 
 OUTPUT_FILE = Path("docs/query_optimization.md")
@@ -24,10 +25,10 @@ QUERIES = [
         "optimized_setup": "SET enable_indexscan = on; SET enable_indexonlyscan = on; SET enable_bitmapscan = on; SET enable_seqscan = off;",
         "unoptimized_sql": """
             EXPLAIN (ANALYZE, BUFFERS)
-            SELECT 
-                f.response_id, 
-                f.monthly_income, 
-                f.rating_1_to_5, 
+            SELECT
+                f.response_id,
+                f.monthly_income,
+                f.rating_1_to_5,
                 g.state_name
             FROM warehouse.fact_responses f
             JOIN warehouse.dim_geography g ON f.geography_key = g.geography_key
@@ -35,10 +36,10 @@ QUERIES = [
         """,
         "optimized_sql": """
             EXPLAIN (ANALYZE, BUFFERS)
-            SELECT 
-                f.response_id, 
-                f.monthly_income, 
-                f.rating_1_to_5, 
+            SELECT
+                f.response_id,
+                f.monthly_income,
+                f.rating_1_to_5,
                 g.state_name
             FROM warehouse.fact_responses f
             JOIN warehouse.dim_geography g ON f.geography_key = g.geography_key
@@ -54,13 +55,13 @@ QUERIES = [
         "optimized_setup": "SET enable_seqscan = on; SET enable_indexscan = on;",
         "unoptimized_sql": """
             EXPLAIN (ANALYZE, BUFFERS)
-            SELECT 
+            SELECT
                 c.choice_category,
                 c.choice_value,
                 COUNT(*) AS choice_count,
                 ROUND((COUNT(*)::numeric / (
-                    SELECT COUNT(*) 
-                    FROM warehouse.fact_response_choices sub 
+                    SELECT COUNT(*)
+                    FROM warehouse.fact_response_choices sub
                     WHERE sub.choice_category = c.choice_category
                 ) * 100), 2) AS category_pct
             FROM warehouse.fact_response_choices c
@@ -69,7 +70,7 @@ QUERIES = [
         """,
         "optimized_sql": """
             EXPLAIN (ANALYZE, BUFFERS)
-            SELECT 
+            SELECT
                 choice_category,
                 choice_value,
                 COUNT(*) AS choice_count,
@@ -88,7 +89,7 @@ QUERIES = [
         "optimized_setup": "SET enable_seqscan = on; SET enable_indexscan = on;",
         "unoptimized_sql": """
             EXPLAIN (ANALYZE, BUFFERS)
-            SELECT 
+            SELECT
                 g.region,
                 g.state_name,
                 COUNT(f.response_id) AS response_count,
@@ -104,7 +105,7 @@ QUERIES = [
         "optimized_sql": """
             EXPLAIN (ANALYZE, BUFFERS)
             WITH state_summary AS (
-                SELECT 
+                SELECT
                     g.region,
                     g.state_name,
                     COUNT(f.response_id) AS response_count,
@@ -114,7 +115,7 @@ QUERIES = [
                 WHERE f.rating_1_to_5 IS NOT NULL
                 GROUP BY g.region, g.state_name
             )
-            SELECT 
+            SELECT
                 region,
                 state_name,
                 response_count,
@@ -135,7 +136,7 @@ QUERIES = [
         "optimized_setup": "SET enable_indexscan = on; SET enable_indexonlyscan = on; SET enable_bitmapscan = on;",
         "unoptimized_sql": """
             EXPLAIN (ANALYZE, BUFFERS)
-            SELECT 
+            SELECT
                 e.education_tier,
                 COUNT(f.response_id) AS sample_size,
                 ROUND(percentile_cont(0.50) WITHIN GROUP (ORDER BY f.monthly_income)::numeric, 2) AS median_income,
@@ -148,7 +149,7 @@ QUERIES = [
         """,
         "optimized_sql": """
             EXPLAIN (ANALYZE, BUFFERS)
-            SELECT 
+            SELECT
                 e.education_tier,
                 COUNT(f.response_id) AS clean_sample,
                 ROUND(percentile_cont(0.50) WITHIN GROUP (ORDER BY f.monthly_income)::numeric, 2) AS median_income,
@@ -164,7 +165,7 @@ QUERIES = [
 ]
 
 
-def run_explain(conn, setup_cmd: str, query_text: str) -> Tuple[float, float, int, str, str]:
+def run_explain(conn, setup_cmd: str, query_text: str) -> tuple[float, float, int, str, str]:
     """Executes EXPLAIN (ANALYZE, BUFFERS) and parses execution time, planning time, buffers, and plan."""
     if setup_cmd:
         conn.execute(text(setup_cmd))
@@ -218,25 +219,29 @@ def main():
 
             speedup = round(unopt_exec / max(opt_exec, 0.001), 2)
             buf_reduction = (
-                f"{round(((unopt_buf - opt_buf) / max(unopt_buf, 1)) * 100, 1)}%" if unopt_buf > opt_buf else "N/A"
+                f"{round(((unopt_buf - opt_buf) / max(unopt_buf, 1)) * 100, 1)}%"
+                if unopt_buf > opt_buf
+                else "N/A"
             )
 
-            benchmark_results.append({
-                "id": q["id"],
-                "name": q["name"],
-                "category": q["category"],
-                "technique": q["technique"],
-                "unopt_exec": unopt_exec,
-                "opt_exec": opt_exec,
-                "speedup": speedup,
-                "unopt_buf": unopt_buf,
-                "opt_buf": opt_buf,
-                "buf_reduction": buf_reduction,
-                "unopt_scan": unopt_scan,
-                "opt_scan": opt_scan,
-                "unopt_plan": unopt_plan_text,
-                "opt_plan": opt_plan_text,
-            })
+            benchmark_results.append(
+                {
+                    "id": q["id"],
+                    "name": q["name"],
+                    "category": q["category"],
+                    "technique": q["technique"],
+                    "unopt_exec": unopt_exec,
+                    "opt_exec": opt_exec,
+                    "speedup": speedup,
+                    "unopt_buf": unopt_buf,
+                    "opt_buf": opt_buf,
+                    "buf_reduction": buf_reduction,
+                    "unopt_scan": unopt_scan,
+                    "opt_scan": opt_scan,
+                    "unopt_plan": unopt_plan_text,
+                    "opt_plan": opt_plan_text,
+                }
+            )
             print(
                 f"  -> {q['id']}: Unoptimized={unopt_exec:.2f}ms ({unopt_buf} bufs) | "
                 f"Optimized={opt_exec:.2f}ms ({opt_buf} bufs) | Speedup={speedup}x"
@@ -247,7 +252,7 @@ def main():
         "# SQL Query Optimization & Performance Benchmarking Report",
         "",
         "> [!IMPORTANT]",
-        f"> **Measured Execution Timestamp:** {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}  ",
+        f"> **Measured Execution Timestamp:** {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S UTC')}  ",
         "> **Methodology:** PostgreSQL `EXPLAIN (ANALYZE, BUFFERS)` execution plans with buffer read audits  ",
         "> **Dataset Volume:** 54,173 warehouse facts + 135,584 multi-select choice bridges  ",
         "> **Hardware Environment:** Docker Containerized PostgreSQL 16 Alpine on Dedicated Named Volume",
@@ -263,44 +268,50 @@ def main():
             f"| **{b['id']}** | {b['name']} | {b['category']} | `{b['unopt_exec']:.2f} ms` | `{b['opt_exec']:.2f} ms` | **`{b['speedup']:.1f}x` faster** | `{b['buf_reduction']}` (`{b['unopt_buf']}` -> `{b['opt_buf']}`) | `{b['opt_scan']}` |"
         )
 
-    lines.extend([
-        "",
-        "## 2. Query-by-Query Analysis & Plan Comparison",
-        "",
-    ])
+    lines.extend(
+        [
+            "",
+            "## 2. Query-by-Query Analysis & Plan Comparison",
+            "",
+        ]
+    )
 
     for b in benchmark_results:
-        lines.extend([
-            f"### Query {b['id']}: {b['name']}",
-            f"- **Optimization Pattern:** {b['technique']}",
-            f"- **Unoptimized Execution Time:** `{b['unopt_exec']:.2f} ms` (`{b['unopt_buf']}` buffer hits, method: `{b['unopt_scan']}`)",
-            f"- **Optimized Execution Time:** `{b['opt_exec']:.2f} ms` (`{b['opt_buf']}` buffer hits, method: `{b['opt_scan']}`)",
-            f"- **Measured Speedup:** **`{b['speedup']:.2f}x`** (I/O Reduction: **`{b['buf_reduction']}`**)",
-            "",
-            "<details>",
-            f"<summary>Click to inspect EXPLAIN (ANALYZE, BUFFERS) execution plans for {b['id']}</summary>",
-            "",
-            "#### Unoptimized Execution Plan:",
-            "```text",
-            b["unopt_plan"],
-            "```",
-            "",
-            "#### Optimized Execution Plan:",
-            "```text",
-            b["opt_plan"],
-            "```",
-            "</details>",
-            "",
-        ])
+        lines.extend(
+            [
+                f"### Query {b['id']}: {b['name']}",
+                f"- **Optimization Pattern:** {b['technique']}",
+                f"- **Unoptimized Execution Time:** `{b['unopt_exec']:.2f} ms` (`{b['unopt_buf']}` buffer hits, method: `{b['unopt_scan']}`)",
+                f"- **Optimized Execution Time:** `{b['opt_exec']:.2f} ms` (`{b['opt_buf']}` buffer hits, method: `{b['opt_scan']}`)",
+                f"- **Measured Speedup:** **`{b['speedup']:.2f}x`** (I/O Reduction: **`{b['buf_reduction']}`**)",
+                "",
+                "<details>",
+                f"<summary>Click to inspect EXPLAIN (ANALYZE, BUFFERS) execution plans for {b['id']}</summary>",
+                "",
+                "#### Unoptimized Execution Plan:",
+                "```text",
+                b["unopt_plan"],
+                "```",
+                "",
+                "#### Optimized Execution Plan:",
+                "```text",
+                b["opt_plan"],
+                "```",
+                "</details>",
+                "",
+            ]
+        )
 
-    lines.extend([
-        "## 3. Engineering Key Takeaways for CV / Technical Interviews",
-        "",
-        "1. **B-Tree Indexing on Filter Attributes (Query Q1):** Replacing full table sequential scans with targeted index lookups dropped execution time from `~10 ms` down to sub-millisecond (`0.05 ms`), reducing disk buffer touches from `2,118` blocks to just `2` blocks (99.9% I/O reduction).",
-        "2. **Eliminating Correlated Subqueries (Query Q2):** Correlated subqueries execute once per outer row, introducing quadratic $O(N \\times M)$ complexity and repeatedly scanning the table. Replacing this with a single-pass window function `SUM(COUNT(*)) OVER (PARTITION BY choice_category)` achieved an **8.2x speedup** (from `171 ms` to `20 ms`) and reduced shared buffer hits by `91%`.",
-        "3. **Materialized CTE Aggregation Barriers (Query Q3):** Pre-aggregating raw survey responses into regional/state groupings inside a CTE prior to running window ranking functions (`RANK`, `NTILE`) eliminates redundant window partition sorts across tens of thousands of rows.",
-        "4. **Partial Indexes on Cleaned Subsets (Query Q4):** Indexing only clean records (`WHERE is_outlier_income = FALSE`) keeps the B-Tree index compact, cache-resident in shared buffers, and prevents index pollution from dirty survey noise.",
-    ])
+    lines.extend(
+        [
+            "## 3. Engineering Key Takeaways for CV / Technical Interviews",
+            "",
+            "1. **B-Tree Indexing on Filter Attributes (Query Q1):** Replacing full table sequential scans with targeted index lookups dropped execution time from `~10 ms` down to sub-millisecond (`0.05 ms`), reducing disk buffer touches from `2,118` blocks to just `2` blocks (99.9% I/O reduction).",
+            "2. **Eliminating Correlated Subqueries (Query Q2):** Correlated subqueries execute once per outer row, introducing quadratic $O(N \\times M)$ complexity and repeatedly scanning the table. Replacing this with a single-pass window function `SUM(COUNT(*)) OVER (PARTITION BY choice_category)` achieved an **8.2x speedup** (from `171 ms` to `20 ms`) and reduced shared buffer hits by `91%`.",
+            "3. **Materialized CTE Aggregation Barriers (Query Q3):** Pre-aggregating raw survey responses into regional/state groupings inside a CTE prior to running window ranking functions (`RANK`, `NTILE`) eliminates redundant window partition sorts across tens of thousands of rows.",
+            "4. **Partial Indexes on Cleaned Subsets (Query Q4):** Indexing only clean records (`WHERE is_outlier_income = FALSE`) keeps the B-Tree index compact, cache-resident in shared buffers, and prevents index pollution from dirty survey noise.",
+        ]
+    )
 
     OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT_FILE.write_text("\n".join(lines) + "\n", encoding="utf-8")

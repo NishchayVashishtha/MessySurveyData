@@ -12,7 +12,7 @@ It does NOT contain real survey responses and must NOT be represented as real.
 import argparse
 import random
 from pathlib import Path
-from typing import List, Tuple
+
 import numpy as np
 import pandas as pd
 
@@ -54,26 +54,56 @@ GENDERS = ["Male", "Female", "Non-Binary", "Prefer not to say"]
 GENDER_MESSY = ["M", "F", "male", "FEMALE", "m", "f", ""]
 
 OCCUPATIONS = [
-    "Software Engineer", "Data Scientist", "Student", "Teacher",
-    "Government Employee", "Business Owner", "Farmer", "Homemaker",
-    "Unemployed", "Doctor", "Lawyer", "Sales Executive",
+    "Software Engineer",
+    "Data Scientist",
+    "Student",
+    "Teacher",
+    "Government Employee",
+    "Business Owner",
+    "Farmer",
+    "Homemaker",
+    "Unemployed",
+    "Doctor",
+    "Lawyer",
+    "Sales Executive",
 ]
 OCCUPATION_MESSY = [
-    "developer", "studying", "govt employee", "businessman", "kisan",
-    "housewife", "sw engineer", "civil servant", "shopkeeper",
+    "developer",
+    "studying",
+    "govt employee",
+    "businessman",
+    "kisan",
+    "housewife",
+    "sw engineer",
+    "civil servant",
+    "shopkeeper",
 ]
 
 EDUCATIONS = [
-    "High School", "Senior Secondary", "Bachelor's Degree",
-    "Master's Degree", "Doctorate (Ph.D.)", "Diploma",
+    "High School",
+    "Senior Secondary",
+    "Bachelor's Degree",
+    "Master's Degree",
+    "Doctorate (Ph.D.)",
+    "Diploma",
 ]
 EDUCATION_MESSY = [
-    "10th pass", "12th pass", "btech", "b.com", "m.tech", "mba",
-    "undergraduate", "phd", "college grad",
+    "10th pass",
+    "12th pass",
+    "btech",
+    "b.com",
+    "m.tech",
+    "mba",
+    "undergraduate",
+    "phd",
+    "college grad",
 ]
 
 PARTIES = [
-    ("Bharatiya Janata Party", ["BJP", "B.J.P.", "bharatiya janata party", "bhartiya janata party"]),
+    (
+        "Bharatiya Janata Party",
+        ["BJP", "B.J.P.", "bharatiya janata party", "bhartiya janata party"],
+    ),
     ("Indian National Congress", ["INC", "congress", "I.N.C.", "indian national congress"]),
     ("Aam Aadmi Party", ["AAP", "aam aadmi party", "A.A.P."]),
     ("Trinamool Congress", ["TMC", "all india trinamool congress", "aitc"]),
@@ -83,9 +113,16 @@ PARTIES = [
 ]
 
 MULTI_SELECT_ISSUES = [
-    "Inflation", "Unemployment", "Healthcare Access", "Road Infrastructure",
-    "Education Quality", "Corruption", "Water Supply", "Air Pollution",
-    "Digital Connectivity", "Agricultural MSP",
+    "Inflation",
+    "Unemployment",
+    "Healthcare Access",
+    "Road Infrastructure",
+    "Education Quality",
+    "Corruption",
+    "Water Supply",
+    "Air Pollution",
+    "Digital Connectivity",
+    "Agricultural MSP",
 ]
 
 COMMENTS = [
@@ -238,22 +275,24 @@ def generate_dirty_survey(num_rows: int = 10000, seed: int = SEED) -> pd.DataFra
             if random.random() < 0.20:
                 comment_val = f"  {comment_val}   "  # Stray padding
 
-        records.append({
-            "respondent_id": resp_id,
-            "state": state_val,
-            "district": district_val,
-            "age": age_val,
-            "gender": gender_val,
-            "education": education_val,
-            "occupation": occupation_val,
-            "monthly_income": income_val,
-            "party_preference": party_val,
-            "rating_1_to_5": rating_val,
-            "response_date": date_val,
-            "multi_select_choices": choices_val,
-            "free_text_comment": comment_val,
-            "data_classification": "SYNTHETIC_TEST_DATA",
-        })
+        records.append(
+            {
+                "respondent_id": resp_id,
+                "state": state_val,
+                "district": district_val,
+                "age": age_val,
+                "gender": gender_val,
+                "education": education_val,
+                "occupation": occupation_val,
+                "monthly_income": income_val,
+                "party_preference": party_val,
+                "rating_1_to_5": rating_val,
+                "response_date": date_val,
+                "multi_select_choices": choices_val,
+                "free_text_comment": comment_val,
+                "data_classification": "SYNTHETIC_TEST_DATA",
+            }
+        )
 
     df = pd.DataFrame(records)
     return df
@@ -263,8 +302,12 @@ def main():
     parser = argparse.ArgumentParser(
         description="Generate synthetic dirty survey dataset with deliberate real-world flaws."
     )
-    parser.add_argument("--rows", type=int, default=10000, help="Number of rows to generate (default: 10000)")
-    parser.add_argument("--output", type=str, default="data/sample/survey_sample_dirty.csv", help="Output CSV path")
+    parser.add_argument(
+        "--rows", type=int, default=10000, help="Number of rows to generate (default: 10000)"
+    )
+    parser.add_argument(
+        "--output", type=str, default="data/sample/survey_sample_dirty.csv", help="Output CSV path"
+    )
     parser.add_argument("--seed", type=int, default=SEED, help="Random seed for reproducibility")
     args = parser.parse_args()
 
